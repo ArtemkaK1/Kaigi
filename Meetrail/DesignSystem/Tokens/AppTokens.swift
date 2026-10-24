@@ -21,7 +21,6 @@ enum AppLayout {
     static let detailHeight: CGFloat = 440
     static let notesWidth: CGFloat = 360
     static let editorIdeal: CGFloat = 176
-    static let iconTarget: CGFloat = 24 // Native macOS control metric.
     static let timeColumn: CGFloat = 56
     static let cornerRadius: CGFloat = 8
     static let providerCardHeight: CGFloat = 80
@@ -30,6 +29,15 @@ enum AppLayout {
     static let onboardingReadyHeight: CGFloat = 256
     static let onboardingHeight: CGFloat = 440
     static let reviewHeight: CGFloat = 480 // Debug-only constrained-display fixture.
+}
+
+// Shared button geometry. Widths/heights are minimums except equal-width
+// conference and square icon controls; all dimensions grow with text scaling.
+enum AppButtonSize {
+    case regular, icon, conference
+    var width: CGFloat { switch self { case .regular, .conference: 64; case .icon: 24 } }
+    var height: CGFloat { switch self { case .regular, .conference: 32; case .icon: 24 } }
+    var hasFixedWidth: Bool { self != .regular }
 }
 
 enum AppColors {
@@ -41,9 +49,10 @@ enum AppColors {
     static let editor = Color(nsColor: .textBackgroundColor)
     static let border = Color(nsColor: .separatorColor)
     static let accent = Color.accentColor
+    static let onAccent = background
     static let error = Color(nsColor: .systemRed)
     static let warning = Color(nsColor: .systemOrange)
-    static let selected = Color(nsColor: .selectedContentBackgroundColor).opacity(0.16)
+    static let selected = accent.opacity(0.16)
     static let calendarFallback = Color(nsColor: .secondaryLabelColor)
 }
 

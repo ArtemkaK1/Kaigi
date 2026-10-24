@@ -64,6 +64,17 @@ import AppKit
             let app = launch(["-NSAppearance", appearance])
             XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
             XCTAssertTrue(app.buttons["Open notes for Design review"].exists)
+            let join = app.buttons["Join Google Meet"]
+            let links = app.menuButtons["Links"]
+            XCTAssertEqual(join.frame.width, links.frame.width, accuracy: 0.5)
+            XCTAssertEqual(join.frame.height, links.frame.height, accuracy: 0.5)
+            XCTAssertGreaterThanOrEqual(join.frame.width, 64)
+            XCTAssertGreaterThanOrEqual(join.frame.height, 32)
+            XCTAssertGreaterThanOrEqual(app.buttons["Today"].frame.height, 32)
+            let buttonImage = try XCTUnwrap(NSBitmapImageRep(data: join.screenshot().pngRepresentation))
+            let accent = try XCTUnwrap(buttonImage.colorAt(x: buttonImage.pixelsWide / 2, y: buttonImage.pixelsHigh - 4)?.usingColorSpace(.sRGB))
+            XCTAssertGreaterThan(accent.redComponent, accent.greenComponent + 0.1)
+            XCTAssertGreaterThan(accent.redComponent, accent.blueComponent + 0.2)
             let panel = app.descendants(matching: .any).matching(identifier: "Meetrail agenda").firstMatch
             let bitmap = try XCTUnwrap(NSBitmapImageRep(data: panel.screenshot().pngRepresentation))
             let color = try XCTUnwrap(bitmap.colorAt(x: bitmap.pixelsWide - 2, y: bitmap.pixelsHigh - 2)?.usingColorSpace(.sRGB))
@@ -197,6 +208,50 @@ import AppKit
         app.statusItems.firstMatch.click(); app.activate()
         XCTAssertTrue(app.staticTexts["AI is off. Enable it in Settings."].waitForExistence(timeout: 3))
         XCTAssertFalse(app.buttons["Clean Up"].isEnabled)
+    }
+
+    func testProviderStatusColumnsAcrossAppearanceAndTextSizes() throws {
+        for (appearance, large) in [("Aqua", false), ("DarkAqua", false), ("DarkAqua", true)] {
+            let app = launch(["--onboarding", "--fifty-calendars", "-NSAppearance", appearance] + (large ? ["--large-text"] : []))
+            let window = app.windows["Welcome to Meetrail"]
+            XCTAssertTrue(window.waitForExistence(timeout: 8))
+            window.buttons["Continue"].click()
+            let name = window.staticTexts["provider-name-system"]
+            let status = window.staticTexts["provider-status-system"]
+            XCTAssertTrue(status.waitForExistence(timeout: 3))
+            XCTAssertEqual(status.value as? String, "Not connected")
+            XCTAssertEqual(name.frame.minX, status.frame.minX, accuracy: 1)
+            XCTAssertGreaterThanOrEqual(status.frame.minY, name.frame.maxY)
+            window.buttons["Connect Apple / System Calendars"].click()
+            XCTAssertTrue(window.staticTexts["Connected through macOS"].waitForExistence(timeout: 3))
+            XCTAssertEqual(name.frame.minX, status.frame.minX, accuracy: 1)
+            for kind in ["google", "microsoft", "yandex", "zoho", "calDAV"] {
+                let title = window.staticTexts["provider-name-\(kind)"]
+                let description = window.staticTexts["provider-status-\(kind)"]
+                XCTAssertTrue(title.exists && description.exists)
+                XCTAssertEqual(title.frame.minX, description.frame.minX, accuracy: 1)
+                XCTAssertGreaterThanOrEqual(description.frame.minY, title.frame.maxY)
+            }
+            let attachment = XCTAttachment(screenshot: window.screenshot())
+            attachment.name = "Synthetic provider alignment \(appearance) large=\(large)"; attachment.lifetime = .keepAlways; add(attachment)
+            app.terminate()
+        }
+    }
+    func testAIReviewErrorDoesNotOfferSaveRetryForSavedNotes() throws {
+        let app = launch(["--mock-ai"])
+        app.buttons["Open notes for Product conversation"].click()
+        let editor = app.textViews["Meeting notes"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.click(); editor.typeText("Synthetic original")
+        app.buttons["Clean Up"].click()
+        XCTAssertTrue(app.buttons["Apply"].waitForExistence(timeout: 3))
+        editor.click(); app.typeKey("a", modifierFlags: .command); editor.typeText("Changed synthetic note")
+        app.buttons["Apply"].click()
+        XCTAssertTrue(app.staticTexts["Your notes changed. Generate a fresh preview before applying."].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Saved locally"].exists)
+        XCTAssertFalse(app.buttons["Retry save"].exists)
+        app.buttons["Dismiss"].click(); app.buttons["Cancel"].click()
+        XCTAssertEqual(editor.value as? String, "Changed synthetic note")
     }
 
 }

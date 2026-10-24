@@ -180,7 +180,7 @@ import SwiftUI
     private func makeWindow<V: View>(title: String, root: V) -> NSWindow {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         window.title = title; window.isReleasedWhenClosed = false; window.minSize = NSSize(width: 480, height: 360); window.delegate = self
-        let host = NSHostingController(rootView: root); host.sizingOptions = []; window.contentViewController = host
+        let host = NSHostingController(rootView: root.modifier(ReviewLayoutModifier())); host.sizingOptions = []; window.contentViewController = host
         window.setContentSize(NSSize(width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight)); window.center(); return window
     }
     func showFloatingNote(_ id: NoteID) {

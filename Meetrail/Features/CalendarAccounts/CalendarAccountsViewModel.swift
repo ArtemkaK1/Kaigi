@@ -15,6 +15,14 @@ struct ProviderCardState: Identifiable {
     let kind: CalendarProviderKind
     let state: AccountConnectionState
     var canConnect: Bool { state == .notConnected || state == .permissionDenied }
+    var statusDescription: String {
+        switch state {
+        case .connected: connectionSummary
+        case .comingSoon: "Coming Soon"
+        case .permissionDenied: "Calendar access denied"
+        default: "Not connected"
+        }
+    }
     var connectionSummary: String { kind == .system ? "Connected through macOS" : "Connected" }
 }
 @MainActor @Observable final class CalendarAccountsViewModel {

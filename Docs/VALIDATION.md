@@ -266,3 +266,65 @@ New coverage: day-scoped recovery and hidden-calendar exclusion; same-series his
 Files affected by P11 are limited to App window/composition code, existing design-system tokens/components (including a rendered-content scroll component), Agenda/MeetingDetail/Settings/Onboarding/CalendarAccounts Views and ViewModels, relevant note-retrieval/preferences/action protocols/use cases, the notification adapter's lead time/test boundary, tests and existing documentation. Removed: both NotesLibrary files, their feature directory, standalone notes routes, embedded Settings route, onboarding reset route, footer/visible Quit/duplicated close controls and obsolete estimated-height state. Calendar adapters, matching/recurrence algorithms, SwiftData schema and Foundation Models implementation were not changed by P11.
 
 The final normally signed Release app is available at `/tmp/MeetrailP11Release/Build/Products/Release/Meetrail.app` for manual review. No install, login registration, branch, commit, push or publication was performed. Full spoken VoiceOver output and visible OS notification banners remain unverified; follow Docs/QA.md rather than treating automated interaction or notification-client tests as those checks. Other physical displays and macOS 15 runtime execution retain their earlier manual status.
+
+### P11 follow-up — shared button dimensions and orange accent
+
+`AppButtonSize` in the existing token file supplies regular text-button minimums of 64 × 32 points, square toolbar icons of 24 × 24, and equal-width conference controls of 64 × 32. Dimensions scale with accessible text; regular labels may expand horizontally. `MeetrailButtonStyle` applies these dimensions centrally. Join and Links share the conference size, including the menu trigger. Missing-calendar connection actions now use the same style. Meeting cards retain their separate design-system row metric; native menus, calendar checkboxes and OS alerts retain native sizing.
+
+Primary buttons again use the existing orange AccentColor asset, with an adaptive contrasting label. Secondary buttons and toolbar symbols use orange text/icons. Selected/review surfaces reference the same orange accent. No feature-layer colors, fonts or spacing literals were introduced. Calendar adapters, notes, AI processing and preferences were unchanged.
+
+The existing light/dark GUI test now compares Join/Links width and height, checks minimum action-button height, and samples rendered orange fill in both appearances. All other GUI checks remain intact, including enlarged text, notes/AI preview, onboarding, navigation and status-menu actions. An initial run encountered two status-item interaction failures while an older Xcode-launched build was also running. That copy was quit normally to preserve drafts before repeating the suite with a single instance. A read-only store comparison confirmed the existing four records remained unchanged and all five local notes were retained. No calendar fixtures were created for this styling-only follow-up.
+
+Follow-up result: **11 GUI tests passed, 0 failures, 0 skips**. Result bundle: `/tmp/MeetrailP11/Logs/Test/Test-Meetrail-2026.10.24_13-34-49-+0200.xcresult`; log: `/tmp/meetrail-button-ui.log`. Debug and Release builds passed (`/tmp/meetrail-button-debug.log`, `/tmp/meetrail-button-release.log`), as did the architecture/token guard and `git diff --check`. Domain/real-calendar/real-AI tests were not rerun for this presentation-only follow-up; their prior P11 results remain recorded above. [Final synthetic orange-button capture](P11-buttons-orange.jpg).
+
+## P12 — final Apple design review (2026-10-24)
+
+**UI implementation: PASS.** Explicitly loaded the locally installed `/Users/artemiy/.agents/skills/apple-design/SKILL.md`. Applied its grouping, alignment, familiar controls, immediate feedback, readable native typography and restraint principles to SwiftUI/AppKit. No web libraries, decorative motion or navigation redesign were introduced.
+
+| Demonstrated issue | Minimal correction |
+| --- | --- |
+| Independent provider heading/status rows put the connected checkmark beside the status rather than below its provider icon. Coming Soon text started at the card edge. Adjacent unequal-height cards were vertically centered. | One shared two-column Grid per card, top-aligned outer columns, reserved icon cells and 8-point spacing. Provider/status text shares a leading edge; connected icons share a center axis. Disconnected/denied status is explicit. Decorative icons are hidden from accessibility, with separate readable provider/status elements. |
+| The Welcome heading truncated at enlarged accessibility text. | Welcome and Ready use bounded native scrolling with vertically unconstrained text. Normal content retains centered grouping, existing window dimensions and footer actions. |
+| A stale AI preview displayed Retry save even though the current note was Saved locally. | Show that action only while the note is unsaved. Existing Dismiss, preview Apply/Cancel and stale-preview safeguards remain intact. |
+
+Reviewed the actual single-day agenda, separate meeting-card/Join controls, editor and mock AI review/error, four onboarding stages, provider connections, five-account/50-calendar selection, native Settings and empty state. Agenda/card hierarchy, orange shared controls, editor boundary, context presentation, native scrolling and existing navigation were intentionally retained where no concrete defect was found. No changes to calendar adapters, recurrence/matching, database/schema/location, AI processing, notification scheduling, dependencies or production permissions. No calendar fixtures or real-note edits were needed for this pass; sample notes remained in memory.
+
+### Actual MacBook validation
+
+- Signed Debug app: visually inspected connected/disconnected/Coming Soon provider cards in Aqua and DarkAqua, wrapped Microsoft provider names, enlarged connected cards, enlarged Welcome, Ready, selection and empty agenda. Provider names/statuses remain independently readable in the actual accessibility tree. Native scrolling exposes overflow rather than truncating it.
+- Keyboard Return advanced Welcome → connections → selection → Ready → agenda. Existing GUI tests passed Command-comma Settings, day navigation, Command-[ history/back and Escape dismissal. A manual Tab probe did not move focus under the current macOS keyboard-navigation configuration; full Tab/Shift-Tab traversal with Keyboard navigation enabled and spoken VoiceOver remain manual checks. No global keyboard-navigation preference was changed. The original Russian input source was restored after Latin XCTest input.
+- Signed Release app launched successfully and displayed existing recovered meetings. Command-comma opened native Settings with the existing preferences retained (AI On, reminders Off, login Off). Settings was closed without changing preferences. No actual account/calendar screenshots were saved.
+- No authored animation was added; existing instant button feedback/native behavior is retained. Toggling the system Reduce Motion preference, other physical displays and execution on macOS 15 were not performed. These are not implied by successful builds or enlarged-text fixtures.
+
+### Tests and builds
+
+**32 relevant test executions passed, 0 failures, 0 skips:** all 13 GUI tests plus 19 tests from StabilizationTests/UICleanupTests. Two new GUI checks verify provider text-column bounds across appearances/text sizes and stale-AI feedback without a misleading save retry. Existing autosave failure/retry, recovery/context, onboarding migration/selection, mock AI safeguards, five-minute reminder and window/navigation coverage passed. The existing real structured Foundation Models/unsupported-language probe also passed in the selected unit suite; the synthetic GUI AI captures use a deterministic mock and do not claim live inference. The full EventKit integration suite was not rerun for this presentation-only change.
+
+An initial focused GUI attempt exposed an accessibility grouping issue and Latin input synthesis under the Russian input source. GridRow accessibility containment and ABC test input corrected these; the final complete GUI run below passed without removing or skipping assertions.
+
+```sh
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP12 \
+  -only-testing:MeetrailUITests -parallel-testing-enabled NO test
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP12 \
+  -only-testing:MeetrailTests/StabilizationTests \
+  -only-testing:MeetrailTests/UICleanupTests -parallel-testing-enabled NO test
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP12 build
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Release \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP12Release build
+python3 Tools/verify-architecture.py
+git diff --check
+```
+
+Both final builds passed with existing automatic signing. Architecture/token checks and `git diff --check` passed. The Release build retains the unrelated AppIntents metadata-extraction warning. The GUI result bundle also records an internal priority-inversion runtime warning; no test failed or visible hang occurred, and its source was not localized during this UI-only pass. Logs: `/tmp/meetrail-p12-ui.log`, `/tmp/meetrail-p12-unit.log`, `/tmp/meetrail-p12-debug.log`, `/tmp/meetrail-p12-release.log`. Result bundles: `/tmp/MeetrailP12/Logs/Test/Test-Meetrail-2026.10.24_14-02-06-+0200.xcresult` (13 GUI), `/tmp/MeetrailP12/Logs/Test/Test-Meetrail-2026.10.24_14-06-41-+0200.xcresult` (19 selected unit tests). Final Release app: `/tmp/MeetrailP12Release/Build/Products/Release/Meetrail.app`.
+
+### Synthetic captures
+
+| Screen | Before | After |
+| --- | --- | --- |
+| Provider alignment | [Before](P12-before-providers.jpg) | [Connected light](P12-providers-light.jpg), [connected dark](P12-providers-dark.jpg) |
+| Enlarged Welcome | [Truncated](P12-before-large-welcome.jpg) | [Wrapping and scrolling](P12-large-welcome.jpg) |
+
+Additional synthetic captures: [disconnected/Coming Soon](P12-providers-disconnected.jpg), [enlarged connected providers](P12-providers-large.jpg), [stale AI review feedback](P12-ai-error.jpg), [empty agenda](P12-empty.jpg). All images contain synthetic data only. No branch, commit, push, installation or publication was performed.

@@ -9,9 +9,9 @@ struct JoinControl: View {
                 Button("Join") { action(link) }.accessibilityLabel("Join \(link.provider)")
             } else if !links.isEmpty {
                 Menu("Links") { ForEach(links) { link in Button("\(link.provider) · \(link.url.host ?? "")") { action(link) } } }
-                    .help("Choose a calendar link and verify its destination")
+                    .menuIndicator(.hidden).help("Choose a calendar link and verify its destination")
             }
-        }.buttonStyle(MeetrailButtonStyle(prominent: true)).controlSize(.small).appText(.caption, weight: .medium)
+        }.buttonStyle(MeetrailButtonStyle(prominent: true, size: .conference)).controlSize(.small).appText(.caption, weight: .medium)
     }
 }
 struct SymbolButton: View {
@@ -19,8 +19,8 @@ struct SymbolButton: View {
     let label: String
     let action: () -> Void
     var body: some View {
-        Button(action: action) { Image(systemName: symbol).frame(width: AppLayout.iconTarget, height: AppLayout.iconTarget) }
-            .buttonStyle(MeetrailButtonStyle(compact: true)).appText(.body, weight: .medium).accessibilityLabel(label).help(label)
+        Button(action: action) { Image(systemName: symbol) }
+            .buttonStyle(MeetrailButtonStyle(size: .icon)).appText(.body, weight: .medium).accessibilityLabel(label).help(label)
     }
 }
 struct InlineMessage: View {
@@ -38,14 +38,18 @@ extension AppColors {
 
 struct MeetrailButtonStyle: ButtonStyle {
     var prominent = false
-    var compact = false
+    var size: AppButtonSize = .regular
+    @ScaledMetric(relativeTo: .body) private var nativeScale = 100
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var scale: CGFloat { max(nativeScale / 100, AppTypography.scale(for: dynamicTypeSize)) }
     @Environment(\.isEnabled) private var enabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, compact ? AppSpacing.none : AppSpacing.xs)
-            .padding(.vertical, compact ? AppSpacing.none : AppSpacing.xs)
-            .foregroundStyle(enabled ? (prominent ? AppColors.background : AppColors.primary) : AppColors.disabled)
-            .background(prominent && enabled ? AppColors.primary : (configuration.isPressed ? AppColors.selected : AppColors.surface), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
+            .padding(.horizontal, size == .icon ? AppSpacing.none : AppSpacing.xs)
+            .padding(.vertical, size == .icon ? AppSpacing.none : AppSpacing.xs)
+            .frame(minWidth: size.width * scale, maxWidth: size.hasFixedWidth ? size.width * scale : nil, minHeight: size.height * scale)
+            .foregroundStyle(enabled ? (prominent ? AppColors.onAccent : AppColors.accent) : AppColors.disabled)
+            .background(prominent && enabled ? AppColors.accent : (configuration.isPressed ? AppColors.selected : AppColors.surface), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
             .overlay { RoundedRectangle(cornerRadius: AppLayout.cornerRadius).strokeBorder(AppColors.border, lineWidth: 1).allowsHitTesting(false) }
             .contentShape(RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
             .opacity(configuration.isPressed ? 0.8 : 1)

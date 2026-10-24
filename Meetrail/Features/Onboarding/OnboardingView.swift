@@ -14,23 +14,27 @@ struct OnboardingView: View {
             Group {
                 switch model.stage {
                 case .welcome:
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("Your meetings. Your notes. All connected.").appText(.title, weight: .semibold).accessibilityAddTraits(.isHeader)
-                        Text("Meetings and private notes, together in your menu bar.").appText(.body).foregroundStyle(AppColors.secondary)
-                        Label("Open a meeting and write freely", systemImage: "square.and.pencil").appText(.body)
-                        Label("Keep context across recurring meetings", systemImage: "text.bubble").appText(.body)
-                        Label("Keep your notes on this Mac", systemImage: "lock").appText(.body)
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("Your meetings. Your notes. All connected.").appText(.title, weight: .semibold).accessibilityAddTraits(.isHeader)
+                            Text("Meetings and private notes, together in your menu bar.").appText(.body).foregroundStyle(AppColors.secondary)
+                            Label("Open a meeting and write freely", systemImage: "square.and.pencil").appText(.body)
+                            Label("Keep context across recurring meetings", systemImage: "text.bubble").appText(.body)
+                            Label("Keep your notes on this Mac", systemImage: "lock").appText(.body)
+                        }.frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                    }.defaultScrollAnchor(.center, for: .alignment)
                 case .connect:
                     ProviderConnectionsView(model: model.accounts)
                 case .selection:
                     CalendarSelectionView(model: model.accounts)
                 case .ready:
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Label("You're ready", systemImage: "checkmark.circle").appText(.title, weight: .semibold).accessibilityAddTraits(.isHeader)
-                        Text("\(model.accounts.selectedCount) calendars selected. Open Meetrail from the note icon in your menu bar.").appText(.body)
-                        Text("Manage calendars and preferences in Settings.").appText(.body).foregroundStyle(AppColors.secondary)
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Label("You're ready", systemImage: "checkmark.circle").appText(.title, weight: .semibold).accessibilityAddTraits(.isHeader)
+                            Text("\(model.accounts.selectedCount) calendars selected. Open Meetrail from the note icon in your menu bar.").appText(.body)
+                            Text("Manage calendars and preferences in Settings.").appText(.body).foregroundStyle(AppColors.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                    }.defaultScrollAnchor(.center, for: .alignment)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             Divider().overlay(AppColors.border)

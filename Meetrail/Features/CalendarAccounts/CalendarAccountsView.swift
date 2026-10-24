@@ -18,25 +18,36 @@ struct CalendarAccountsView: View {
 }
 struct ProviderConnectionsView: View {
     @Bindable var model: CalendarAccountsViewModel
-    private let columns = [GridItem(.flexible(), spacing: AppSpacing.xs), GridItem(.flexible(), spacing: AppSpacing.xs)]
+    private let columns = [GridItem(.flexible(), spacing: AppSpacing.xs, alignment: .top), GridItem(.flexible(), spacing: AppSpacing.xs, alignment: .top)]
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("Calendars synchronized through macOS are available now.").appText(.caption).foregroundStyle(AppColors.secondary)
                 LazyVGrid(columns: columns, alignment: .leading, spacing: AppSpacing.xs) {
                     ForEach(model.providers) { card in
-                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                            HStack(alignment: .top, spacing: AppSpacing.xs) {
-                                Image(systemName: card.kind == .system ? "desktopcomputer" : "calendar").frame(width: AppLayout.iconTarget).accessibilityHidden(true)
-                                Text(card.kind.title).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
-                            }.appText(.body, weight: .semibold)
-                            if card.state == .comingSoon { Text("Coming Soon").appText(.caption, weight: .medium).foregroundStyle(AppColors.secondary) }
-                            else if card.state == .connected { Label(card.connectionSummary, systemImage: "checkmark.circle").appText(.caption).foregroundStyle(AppColors.secondary) }
-                            else if card.canConnect {
-                                Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { model.requestConnection(card.kind) })
-                                    .appText(.body, weight: .medium).buttonStyle(MeetrailButtonStyle()).disabled(model.connecting).accessibilityLabel(card.state == .permissionDenied ? "Open calendar privacy settings" : "Connect \(card.kind.title)")
-                            }
-                        }.padding(AppSpacing.xs).frame(maxWidth: .infinity, minHeight: AppLayout.providerCardHeight, alignment: .topLeading)
+                        Grid(alignment: .topLeading, horizontalSpacing: AppSpacing.xs, verticalSpacing: AppSpacing.xs) {
+                            GridRow {
+                                Image(systemName: card.kind == .system ? "desktopcomputer" : "calendar")
+                                    .frame(width: AppButtonSize.icon.width).accessibilityHidden(true)
+                                Text(card.kind.title).appText(.body, weight: .semibold)
+                                    .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("provider-name-\(card.kind.rawValue)")
+                            }.accessibilityElement(children: .contain)
+                            GridRow {
+                                Image(systemName: "checkmark.circle").appText(.caption).foregroundStyle(AppColors.secondary)
+                                    .frame(width: AppButtonSize.icon.width).opacity(card.state == .connected ? 1 : 0).accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                    Text(card.statusDescription).appText(.caption).foregroundStyle(AppColors.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .accessibilityIdentifier("provider-status-\(card.kind.rawValue)")
+                                    if card.canConnect {
+                                        Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { model.requestConnection(card.kind) })
+                                            .appText(.body, weight: .medium).buttonStyle(MeetrailButtonStyle()).disabled(model.connecting)
+                                            .accessibilityLabel(card.state == .permissionDenied ? "Open calendar privacy settings" : "Connect \(card.kind.title)")
+                                    }
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                            }.accessibilityElement(children: .contain)
+                        }.appText(.body, weight: .semibold).padding(AppSpacing.xs).frame(maxWidth: .infinity, minHeight: AppLayout.providerCardHeight, alignment: .topLeading)
                             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
                             .overlay { RoundedRectangle(cornerRadius: AppLayout.cornerRadius).strokeBorder(AppColors.border, lineWidth: 1).allowsHitTesting(false) }
                             .accessibilityElement(children: .contain).accessibilityIdentifier("provider-card-\(card.kind.rawValue)")
@@ -61,7 +72,7 @@ struct CalendarSelectionView: View {
             if model.missingCount > 0 { InlineMessage(text: "\(model.missingCount) selected calendars are unavailable. Selections are retained.") }
             if !model.hasConnectedProvider {
                 InlineMessage(text: "Connect system calendars to choose visible calendars.")
-                Button("Connect Apple / System Calendars", action: model.requestSystemConnection).appText(.body)
+                Button("Connect Apple / System Calendars", action: model.requestSystemConnection).appText(.body).buttonStyle(MeetrailButtonStyle(prominent: true))
             } else if model.catalog.calendars.isEmpty { InlineMessage(text: "No calendars are currently exposed by macOS. Direct provider connections are coming soon.") }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.xs) {

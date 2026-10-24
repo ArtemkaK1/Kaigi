@@ -32,7 +32,10 @@ struct NoteEditorView: View {
             }
             if let error = model.error {
                 InlineMessage(text: error, isError: true)
-                HStack(spacing: AppSpacing.xs) { Button("Retry save", action: model.retrySave); Button("Dismiss", action: model.dismissError) }.appText(.caption).buttonStyle(MeetrailButtonStyle())
+                HStack(spacing: AppSpacing.xs) {
+                    if model.saveStatus != "Saved locally" { Button("Retry save", action: model.retrySave) }
+                    Button("Dismiss", action: model.dismissError)
+                }.appText(.caption).buttonStyle(MeetrailButtonStyle())
             }
             if model.showingRevisions {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
