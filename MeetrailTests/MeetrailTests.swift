@@ -107,12 +107,16 @@ import Foundation
         let start = Date(timeIntervalSince1970: 1700000000)
         #expect(!meeting(start: start).overlaps(DateInterval(start: start.addingTimeInterval(1800), duration: 86400)))
     }
-    @Test func navigationAndSelectionAreIndependentOfJoining() throws {
-        let model = AgendaViewModel(calendar: SampleCalendarGateway(), notes: try NoteRepository(inMemory: true), sample: true)
+    @Test func navigationAndSelectionAreIndependentOfJoining() async throws {
+        let fixture = try TestComposition(); defer { fixture.clearPreferences() }
+        let model = fixture.container.agenda!
+        await model.load()
         let original = model.day.date; model.move(1); #expect(model.day.date > original)
-        model.today(); #expect(Calendar.current.isDateInToday(model.day.date))
+        model.today(); await model.load(); #expect(Calendar.current.isDateInToday(model.day.date))
         model.select(model.meetings[0]); #expect(model.selected != nil)
         #expect(model.selectedMeeting?.id == model.meetings[0].id)
+        #expect(fixture.actions.opened.isEmpty)
+        model.join(model.meetings[0].links[0]); #expect(fixture.actions.opened.count == 1)
     }
     @Test func deterministicAIAndUnavailableFallback() async throws {
         let mock = MockAIRefinementService(result: "Corrected note")

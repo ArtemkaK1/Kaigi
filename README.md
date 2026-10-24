@@ -8,15 +8,16 @@ Meetrail is a native, source-available macOS MVP. The core runs on macOS 15 or n
 
 ## Implemented
 
-- Custom 380-point SwiftUI day agenda in an AppKit status-item panel, chronological cards, previous/next day and Today controls. No month grid or native meeting dropdown.
-- EventKit calendar permission, selection, change notifications, canceled/declined event filtering, all-day and recurring events from macOS calendar accounts.
+- Custom content-sized 344-point SwiftUI day agenda in an AppKit status-item panel, chronological cards, previous/next day and Today controls. No month grid or native meeting dropdown.
+- Dedicated first-run onboarding with skip/resume, honest provider connection states, and searchable account-grouped calendar selection, including per-account selection controls.
+- EventKit calendar permission on explicit connection, stable selection across renames/revocation, change notifications, canceled/declined event filtering, all-day and recurring events from macOS calendar accounts.
 - Separate note and Join actions, recognized Google Meet, Zoom, Teams and Webex HTTPS links, destination-labelled fallback for other HTTPS links.
-- Local SwiftData occurrence notes, immediate autosave, revision restoration, Markdown export, saved-note recovery after calendar disappearance, and floating notes panels.
+- Local SwiftData occurrence notes, immediate autosave, revision restoration, Markdown export, meeting-based recovery after calendar disappearance, and floating notes panels.
 - Explicitly confirmed recurring context with reviewed carryover and a per-series display preference.
 - On-device Clean Up and guided Structure, availability/language checks, preview before apply, original revisions, and deterministic injectable AI mocks. Structure rejects excerpts absent from the original input.
-- Optional private local reminders and launch-at-login controls.
+- Optional private local reminders five minutes before meetings and launch-at-login controls.
 
-Implementation is not a claim that every device-level scenario has passed. See [validation](Docs/VALIDATION.md) for actual results and remaining review checks.
+The P11 local signed suite passed 64 executions with no failures or skips, including real EventKit and eleven GUI tests. Real on-device Clean Up/Structure and own-account Google Meet entry were verified on the development Mac. Implementation is not a claim that every device-level scenario has passed. See [validation](Docs/VALIDATION.md) for actual results and remaining review checks.
 
 ## Build and run
 
@@ -24,7 +25,9 @@ Open `Meetrail.xcodeproj`, select the Meetrail scheme and My Mac, and build/run.
 
 ```sh
 xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug build
-xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -destination 'platform=macOS' test
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -destination 'platform=macOS' \
+  -parallel-testing-enabled NO test
+python3 Tools/verify-architecture.py
 ```
 
 On a Mac without that development certificate, local debugging can use ad-hoc signing while retaining App Sandbox:
@@ -35,17 +38,30 @@ xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
 open /tmp/MeetrailBuild/Build/Products/Debug/Meetrail.app
 ```
 
-Ad-hoc builds are for local review; they are not signed/notarized distribution artifacts. macOS may request calendar consent again after an ad-hoc rebuild. No installer or release has been published. Click the note icon in the menu bar, connect calendars, and approve the calendar prompt. Add Google/Microsoft/CalDAV accounts through macOS Calendar/Internet Accounts. No provider OAuth is implemented in Meetrail. Debug-only `--sample --show-agenda` provides synthetic data without calendar access.
+Ad-hoc builds are for local review; they are not signed/notarized distribution artifacts. macOS may request calendar consent again after an ad-hoc rebuild. No installer or release has been published. First run opens a dedicated Welcome window. Choose Apple / System Calendars to request macOS calendar access, then select visible calendars grouped by account. Skip for now preserves your progress; Settings → Accounts & Calendars remains available. Existing notes, calendar selections, and preferences are retained, and returning users are not forced through setup.
+
+Only Apple / System Calendars connects today. Existing Google/Microsoft/CalDAV calendars already synchronized through macOS remain usable via EventKit. Direct Google, Microsoft, Yandex, Zoho, and CalDAV connections are Coming Soon and will be implemented separately; there are no OAuth clients, tokens, or fake authentication states.
+
+Debug-only `--sample --show-agenda` uses synthetic data without calendar access. Add `--onboarding --fifty-calendars` to review first run and 50 calendars across five accounts. `--empty`, `--one-meeting`, `--fifteen-meetings`, and `--long-titles` exercise layout. Optional `--test-session ID` persists synthetic onboarding/selection preferences across relaunch; sample notes are in memory. For XCTest Latin typing, select the ABC keyboard input source; restore your preferred source afterward.
 
 ## Use
 
-Click a meeting body to edit its occurrence note; Join opens the recognized conference HTTPS link. Multiple or unknown links show their destination in a chooser. Sample fixture links are placeholders, never genuine conferences. Command-left/right moves a day; Command-T returns to Today. Tab navigates controls; standard text editing and undo work in the editor. The pin button opens a floating editor. Revisions restores an earlier saved version while preserving the current version as another revision. Export writes a user-selected Markdown file.
+Click a meeting body to edit its occurrence note; Join opens the recognized conference HTTPS link. Multiple or unknown links show their destination in a chooser. Sample fixture links are placeholders, never genuine conferences. Command-left/right moves a day; Command-T returns to Today. Tab navigates controls; standard text editing and undo work in the editor. Right-click the menu bar icon for Settings and Quit; left-click opens or dismisses the agenda. Command-comma opens Settings. The compact chevron returns to the agenda (Command-[). The pin button opens a floating editor. Revisions restores an earlier saved version while preserving the current version as another revision. Export writes a user-selected Markdown file.
 
-Confirmed context is manually reviewed text. Use “Confirm context” to make it eligible for later occurrences, then explicitly carry it into a later note. No task owner, deadline, or completion state is inferred. Saved notes retains notes after event deletion or an uncertain calendar resync. Fully changed external/calendar identities intentionally do not auto-reattach; recover the original text from Saved notes and export/copy it into the intended meeting after review.
+Confirmed context is manually reviewed text. Use “Confirm context” to make it eligible for later occurrences, then explicitly carry it into a later note. No task owner, deadline, or completion state is inferred. Notes from disappeared events appear as Calendar history meeting cards on their original agenda day. Meeting history opens other saved occurrences of the same series. Fully changed external/calendar identities intentionally do not auto-reattach; export/copy the original text into the intended meeting only after review. There is no standalone notes browser.
+
+Settings includes an On-device AI switch. Clean Up and Structure propose changes to the current note in a Review changes state; Apply saves a revision, while Cancel leaves the original intact. AI availability and processing remain entirely local.
 
 ## Architecture and storage
 
-`Domain` contains value models and calendar-day operations. `Services` contains injectable calendar/AI contracts, EventKit normalization, URL resolution, Foundation Models, notifications, and login-item integration. `Persistence` holds SwiftData notes, local series IDs and revisions with CloudKit disabled. `Presentation` contains the observable agenda view model, SwiftUI views, status panel, and floating panels. No third-party package dependencies are used.
+The dependency direction is Views → ViewModels → domain use cases → repository/provider protocols → Data/Infrastructure adapters. `App/DependencyContainer` and the App composition files construct dependencies and coordinate native windows. Features consistently use `@MainActor @Observable` ViewModels with injected protocols/use cases; Views only render, bind, and forward actions. SwiftData objects, EventKit stores, and AI sessions do not enter features.
+
+- `DesignSystem/Tokens` centralizes AppSpacing (0/8/16/24/32/40/48), semantic light/dark AppColors, scaled native system text roles (caption 11, body 13, section 16, title 20) and regular/medium/semibold weights. Geometry metrics are separate from spacing.
+- `Features` contains Agenda, MeetingDetail, Settings, CalendarAccounts, and Onboarding View/ViewModel pairs.
+- `Domain` contains Sendable snapshots, typed IDs, provider/account/calendar/connection models, normalization, selection, visibility, note/context, join and conservative association use cases.
+- `Data` owns the EventKit provider, unchanged SwiftData schema, preferences adapter, and Foundation Models adapter. `Infrastructure` owns notifications/login, validated URL opening, system-settings navigation and user-selected Markdown export.
+
+Register future adapters through `CalendarAccountCoordinator` in the composition root. Provider-neutral calendar descriptors drive the same selection and onboarding screens; occurrence identities are namespaced outside the legacy system provider. No title-only cross-provider deduplication is performed. The lightweight architecture/design check enforces imports, feature adapter boundaries and token use; see [AGENTS.md](AGENTS.md). No third-party package dependencies are used.
 
 Production events are always read-only. The local series and note UUIDs are independent of EventKit IDs. Matching uses calendar + external event ID, plus the original occurrence date for recurring meetings. One-time meetings retain notes when moved; recurring moves retaining their original slot can preserve notes. Changed external IDs/calendars remain conservatively separate. Calendar cancellations never delete notes.
 
