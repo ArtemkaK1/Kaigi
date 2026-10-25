@@ -1,0 +1,70 @@
+schema_version: 1
+status: design-approved-integrated
+concept:
+  id: A2
+  path: approved-a2.png
+  sha256: f09dfcda9372ef29217108561f9db868cfd18f23b191212ecfaf4a7ce4b88b0b
+approval:
+  explicitly_approved: true
+  approved_at: 2026-10-25
+  evidence_note: 'Owner requested: use A2 (one with bigger logo) as App Icon. Named A2 artwork is the visual lock.'
+design_lock:
+  product_promise: Context carries from one conversation into the next.
+  recognition_anchor: Ivory M with an outgoing horizontal right foot.
+  metaphor: One continuous path.
+  silhouette: Rounded shoulders, deep central valley, extended right foot.
+  composition: Preserve the scale and placement of named A2, including the complete outgoing foot.
+  palette:
+    - name: approved-orange-field
+      value: '#C14B1D'
+    - name: approved-ivory-mark
+      value: '#FDF7EF'
+  protected_invariants:
+    - The M valley and outgoing foot remain one continuous silhouette.
+    - Preserve A2 proportions, footprint and optical placement.
+    - Preserve warm orange field and ivory foreground.
+    - Keep the foreground opaque and quiet, with no new glass or bevel treatment.
+  permitted_production_translations:
+    - Remove incidental generative color noise without changing the identity.
+    - Reconstruct smooth deliberate vector curves.
+    - Apply platform-owned outer mask in Icon Composer.
+production_plan:
+  authorized: true
+  delivery_route: icon-composer
+  composer_feasibility: faithful-simple-background-and-one-vector-symbol
+  composer_adaptation_requires_reapproval: true
+  layers:
+    - order: 1
+      id: canvas-background
+      role: solid orange backdrop
+      source_decision: composer-solid-fill
+      reason: Platform-owned canvas with no intrinsic texture.
+    - order: 2
+      id: 01-carryline
+      role: opaque ivory recognition anchor
+      source_decision: svg
+      reason: One deliberately constructed continuous contour.
+  reapproval_triggers:
+    - Material change to silhouette, scale, composition or palette.
+    - Added gloss, translucency or bevel that changes the approved flat character.
+    - Reconstruction visibly changes identity at full size or 32 pixels.
+validation:
+  composer_source: ../../Meetrail/AppIcon.icon
+  composer_version: '27.0'
+  native_document_authored: true
+  foreground_glass_effects: false
+  platform: macOS
+  approved_proof_reviewed_at_pixels: [1024, 32, 16]
+  composer_appearances_observed: [Default, Dark, Mono]
+  compiled_fallback_reviewed_at_pixels: [256, 32, 16]
+  finder_release_icon_observed: true
+  signed_debug_build: passed
+  signed_release_build: passed
+  deterministic_unit_tests: '42 reported tests in 4 suites passed'
+  focused_ui_tests: '2 passed'
+  not_tested:
+    - Clear and Tinted light/dark Composer previews
+    - Multiple lighting angles and photographic wallpapers
+    - Runtime on macOS 15
+    - Distribution signing, notarization and App Store delivery
+current_blocker: null

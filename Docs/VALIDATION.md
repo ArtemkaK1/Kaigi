@@ -417,3 +417,40 @@ Added: `Meetrail/DesignSystem/Components/ProviderIcon.swift`, `Meetrail/Infrastr
 | Connected providers, light / dark | [Light](P13-providers-light.jpg), [dark](P13-providers-dark.jpg) |
 | Disconnected and Coming Soon | [Capture](P13-providers-disconnected.jpg) |
 | Denied access, enlarged dark text | [Capture](P13-providers-denied-large.jpg) |
+
+## A2 Carryline app icon — 25 October 2026
+
+The owner explicitly selected the named A2 concept for the app icon after exploring the B direction. [Tools/AppIcon/design-approval.yaml](../Tools/AppIcon/design-approval.yaml) records the approved image hash, protected silhouette, orange/ivory palette and production authorization. The original generated reference is preserved in [approved-a2.png](../Tools/AppIcon/approved-a2.png). The foreground was deliberately reconstructed as a simple vector contour in [01-carryline.svg](../Tools/AppIcon/01-carryline.svg), with no auto-tracing or third-party artwork. The 1024px reconstruction was visually compared against A2 at large size and at 32/16 pixels. Incidental generation color noise was removed; the silhouette, scale, placement and outgoing foot were retained.
+
+[Meetrail/AppIcon.icon](../Meetrail/AppIcon.icon) was created, edited and saved in the actual Apple Icon Composer 27.0 app. Its native canvas is sRGB `#C14B1D`; the foreground is `#FDF7EF`, opaque, with glass effects disabled. It uses one foreground layer in one group, and only macOS is enabled. The generated `icon.json` was inspected but not authored or edited manually. Xcode's existing synchronized Meetrail source group automatically includes the document; the existing `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` selects it. The build log confirms that actool compiled the `.icon` alongside Assets.xcassets with deployment target 15.0. The previous asset catalog and historical generator remain preserved. The unrelated automatic signing-key sort change from Xcode was restored.
+
+Environment: macOS 26.6.2, Xcode 27.0 (27A266a). Composer Default, Dark and Mono previews were directly observed. Default retains the approved orange/ivory identity; the automatic Dark preview uses the orange mark on a dark canvas, and Mono preserves the light M silhouette. The actual Xcode-generated AppIcon.icns fallback was extracted and inspected at 256px, 32px and 16px. Finder Get Info directly displayed the new icon for `/tmp/MeetrailCarrylineRelease/Build/Products/Release/Meetrail.app`. No installed application was replaced, and the menu-bar status icon was not modified.
+
+Both normal automatically signed builds passed with the existing development identity. A first restricted-shell Debug attempt could not see the certificate; authorized Xcode execution succeeded without any certificate creation, signing override or sandbox removal. The only build warning was the existing AppIntents metadata extraction warning. The 42 reported Swift Testing tests in four deterministic suites passed, followed by two focused GUI tests, both passing with zero failures or skips. The real EventKit fixture integration test was outside this icon-change regression scope; no calendar fixtures or calendar writes were needed. UI test logs retain the existing debugger-version lookup diagnostic; neither selected test failed.
+
+```sh
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailCarrylineDebug build
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Release \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailCarrylineRelease build
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailCarrylineDebug \
+  -parallel-testing-enabled NO \
+  -only-testing:MeetrailTests/MeetrailTests \
+  -only-testing:MeetrailTests/StabilizationTests \
+  -only-testing:MeetrailTests/UICleanupTests \
+  -only-testing:MeetrailTests/StartupPerformanceTests test
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailCarrylineDebug \
+  -parallel-testing-enabled NO \
+  -only-testing:MeetrailUITests/MeetrailUITests/testFirstStatusClickAfterLaunch \
+  -only-testing:MeetrailUITests/MeetrailUITests/testEmptyStateAndStatusItemDismissal test
+python3 Tools/verify-architecture.py
+git diff --check
+```
+
+Build/test logs: `/tmp/meetrail-carryline-debug.log`, `/tmp/meetrail-carryline-release.log`, `/tmp/meetrail-carryline-unit-tests.log`, `/tmp/meetrail-carryline-ui-tests.log`. Architecture and whitespace checks pass. Compiler-generated app-icon metadata names both CFBundleIconName and CFBundleIconFile as AppIcon. Review proofs and non-sensitive app-icon screenshots are outside Git under `/Users/artemiy/.codex/visualizations/2026/10/25/01a1721d-4810-7461-a89a-8ab755d3f881/meetrail-icon-exploration/a2-production-proof/`.
+
+Not tested: Clear/Tinted light and dark Composer previews, multiple lighting angles/photographic wallpapers, runtime on macOS 15, alternate physical displays, distribution signing, notarization or App Store delivery. The marketing PNG export dialog was not completed; `composer-default.png`, `composer-dark.png` and `composer-mono.png` in the external proof folder are application screenshots, and `compiled-review.png` uses extracted Xcode fallback images. These are distinct evidence types. No claim of full platform/appearance certification is made.
+
+No application Swift code, status-item image, permissions, note schema, license, contributor-rights requirements, branch, commit, push or release was changed. Production changes are the Composer document and its source/approval records, plus this validation entry. Current Apple delivery behavior was checked against [Creating your app icon using Icon Composer](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer).
