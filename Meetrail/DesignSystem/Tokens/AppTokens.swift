@@ -21,7 +21,8 @@ enum AppLayout {
     static let detailHeight: CGFloat = 440
     static let notesWidth: CGFloat = 360
     static let editorIdeal: CGFloat = 176
-    static let timeColumn: CGFloat = 56
+    // Fits 13 pt medium monospaced times ("11:00 AM" measures about 61.1 pt).
+    static let timeColumn: CGFloat = 64
     static let cornerRadius: CGFloat = 8
     static let providerCardHeight: CGFloat = 80
     static let providerIconSize: CGFloat = 24

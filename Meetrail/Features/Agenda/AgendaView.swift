@@ -5,6 +5,8 @@ struct AgendaView: View {
     let maximumHeight: CGFloat
     var onHeightChange: (CGFloat) -> Void
     @State private var headerHeight: CGFloat = AppSpacing.xxl
+    @Environment(\.dynamicTypeSize) private var textSize
+    @ScaledMetric(relativeTo: .body) private var timeColumn = AppLayout.timeColumn
     var body: some View {
         VStack(spacing: AppSpacing.none) {
             if let detail = model.detail {
@@ -109,7 +111,10 @@ struct AgendaView: View {
                             HStack(spacing: AppSpacing.xs) {
                                 Text(note.start.formatted(date: .omitted, time: .shortened))
                                     .appText(.caption, weight: .medium)
-                                    .frame(width: AppLayout.timeColumn, alignment: .leading)
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .frame(width: max(timeColumn, AppLayout.timeColumn * AppTypography.scale(for: textSize)), alignment: .leading)
                                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                                     Text(note.title)
                                         .appText(.body, weight: .semibold)
@@ -155,6 +160,8 @@ struct MeetingCard: View {
     let hasContext: Bool
     let select: () -> Void
     let join: (MeetingLink) -> Void
+    @Environment(\.dynamicTypeSize) private var textSize
+    @ScaledMetric(relativeTo: .body) private var timeColumn = AppLayout.timeColumn
     var body: some View {
         HStack(spacing: AppSpacing.xs) {
             Button(action: select) {
@@ -162,7 +169,9 @@ struct MeetingCard: View {
                     Text(meeting.allDay ? "All day" : meeting.start.formatted(date: .omitted, time: .shortened))
                         .appText(.body, weight: .medium)
                         .monospacedDigit()
-                        .frame(width: AppLayout.timeColumn, alignment: .leading)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(width: max(timeColumn, AppLayout.timeColumn * AppTypography.scale(for: textSize)), alignment: .leading)
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
                         Text(meeting.title)
                             .appText(.body, weight: .semibold)

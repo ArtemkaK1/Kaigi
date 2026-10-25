@@ -187,6 +187,25 @@ import AppKit
         XCTAssertTrue(app.textViews["Meeting notes"].waitForExistence(timeout: 3))
         let screenshot = XCTAttachment(screenshot: panel.screenshot()); screenshot.name = "Synthetic scaled text constrained panel"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
+    func testTimeColumnAcrossClockFormatsAndTextSizes() throws {
+        for (uses24Hours, appearance, large) in [(false, "Aqua", false), (true, "DarkAqua", false), (false, "DarkAqua", true), (true, "Aqua", true)] {
+            let app = launch(["--long-titles", "-AppleLocale", uses24Hours ? "en_GB" : "en_US", "-NSAppearance", appearance] + (large ? ["--large-text"] : []))
+            XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
+            for (title, time) in [("Product conversation", uses24Hours ? "9:00" : "9:00 AM"), ("Design review", uses24Hours ? "11:00" : "11:00 AM"), ("Weekly planning", uses24Hours ? "14:00" : "2:00 PM")] {
+                let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Open notes for \(title)")).firstMatch
+                XCTAssertTrue(card.exists)
+                let value = try XCTUnwrap(card.value as? String).replacingOccurrences(of: "\u{202F}", with: " ")
+                XCTAssertTrue(value.hasPrefix(time + ","), value)
+            }
+            let panel = app.descendants(matching: .any).matching(identifier: "Meetrail agenda").firstMatch
+            XCTAssertLessThanOrEqual(panel.frame.width, 380)
+            let screenshot = XCTAttachment(screenshot: panel.screenshot())
+            screenshot.name = "Synthetic time columns 24h=\(uses24Hours) \(appearance) large=\(large)"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            app.terminate()
+        }
+    }
     func testStatusContextMenuSettingsAndQuit() throws {
         let app = launch()
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
