@@ -378,6 +378,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Meetrail reads your calendars to show meetings and connect your private local notes. Meetrail never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
@@ -414,6 +415,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Meetrail reads your calendars to show meetings and connect your private local notes. Meetrail never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";

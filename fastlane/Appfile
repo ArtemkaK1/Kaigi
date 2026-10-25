@@ -1,0 +1,2 @@
+app_identifier(ENV["APP_IDENTIFIER"] || "com.volrik.meetrail")
+team_id(ENV["APPLE_TEAM_ID"] || "WX557M9HD2")

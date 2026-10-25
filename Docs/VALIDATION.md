@@ -454,3 +454,83 @@ Build/test logs: `/tmp/meetrail-carryline-debug.log`, `/tmp/meetrail-carryline-r
 Not tested: Clear/Tinted light and dark Composer previews, multiple lighting angles/photographic wallpapers, runtime on macOS 15, alternate physical displays, distribution signing, notarization or App Store delivery. The marketing PNG export dialog was not completed; `composer-default.png`, `composer-dark.png` and `composer-mono.png` in the external proof folder are application screenshots, and `compiled-review.png` uses extracted Xcode fallback images. These are distinct evidence types. No claim of full platform/appearance certification is made.
 
 No application Swift code, status-item image, permissions, note schema, license, contributor-rights requirements, branch, commit, push or release was changed. Production changes are the Composer document and its source/approval records, plus this validation entry. Current Apple delivery behavior was checked against [Creating your app icon using Icon Composer](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer).
+
+## P16 — Minimal GitHub Actions and TestFlight publishing (2026-10-25)
+
+Implemented **Publish to TestFlight** as one manual-only job on `xcode-27`, restricted to `main` and the `testflight` Environment, with read-only repository permissions and non-canceling release concurrency. Ruby 3.4.x, Bundler 2.6.3 and Fastlane 2.241.1 were exercised locally; dependencies are committed in Gemfile.lock. Checkout and Ruby setup use verified immutable official action commits. The shared Meetrail scheme includes the app, unit target and UI target and is now tracked. The only app project settings added are `LSApplicationCategoryType=public.app-category.productivity` in Debug and Release: the first archive exposed this missing required Mac App Store metadata. Signing, capabilities, entitlements, persistence, module identity, team, bundle ID, minimum macOS version and marketing version are preserved.
+
+Created: `.github/workflows/publish-to-testflight.yml`, `.ruby-version`, `Gemfile`, `Gemfile.lock`, `fastlane/Appfile`, `fastlane/Fastfile`, `fastlane/ci_support.rb`, `fastlane/ci_support_test.rb`, `fastlane/verify_distribution.py`, `fastlane/verify_distribution_test.py`, `Meetrail.xcodeproj/xcshareddata/xcschemes/Meetrail.xcscheme`, and `Docs/TESTFLIGHT.md`. Modified: `.gitignore`, `README.md`, `Meetrail.xcodeproj/project.pbxproj`, and this validation log. No application Swift source or existing test source changed. No branches, commits, tags, pushes, releases, certificate creation/revocation, remote Environment changes or uploads were performed.
+
+### Local results
+
+| Check | Result |
+| --- | --- |
+| Architecture and `git diff --check` | Passed. |
+| Bundler install / frozen dependency check | Passed with the committed lockfile. |
+| Ruby syntax and `fastlane lanes` | Passed; `mac verify` and `mac beta` load. |
+| CI helper regression checks | Passed: first-build/rerun numbering, stale-number rejection, release guard, malformed-key failure and temporary-directory cleanup; three Python tests cover metadata, capabilities and installer-signature rejection. No dummy key was generated. |
+| Workflow YAML | Parsed successfully; trigger, permissions, runner and Environment contract checked. actionlint 1.7.12 passed with only `label "xcode-27" is unknown` suppressed: this linter's built-in list lags GitHub's documented public-preview runner. No other diagnostics were suppressed. The runner label was retained exactly as requested. |
+| Normal signed Debug and Release builds | Passed with the existing development identity. Final builds include Productivity category metadata. |
+| Deterministic tests, normal local signing | **41 tests in 4 suites passed**, no failures. |
+| Hosted-CI signing path exercised locally | Ad-hoc Debug test host, same **41 tests**, and unsigned Release build check passed without API credentials. These check products are never uploaded. |
+| Focused local GUI tests | **2 passed**, no failures or skips: first status-item click and empty agenda/status-item dismissal. Hosted GUI execution remains outside this workflow. |
+| Fastlane Release archive | Passed using the existing local **development** identity, without provisioning updates or Apple API authentication. Final archive uses build `12345678901001` to exercise the CI integer format. |
+| Archive metadata/signature verification | Passed: `com.volrik.meetrail`, team `WX557M9HD2`, version `1.0`, build `12345678901001`, macOS `15.0`, Productivity, `LSUIElement=true`, calendar usage description, Hardened Runtime, sandbox/calendar/file-selection entitlements and no enabled development/debugging entitlements. |
+| Negative distribution verification | Passed: the development-signed archive app was rejected as a Mac App Store distribution payload. |
+| Cloud distribution app signing | **Not attempted; unverified.** No Team API Key supplied. |
+| Mac Installer Distribution signing / `.pkg` export | **Not attempted; unverified.** No authorized distribution authentication. |
+| TestFlight upload | **Not attempted; not authorized.** |
+| Apple processing / tester availability | **Not started / not verified.** |
+
+Local commands (use Ruby 3.4.x on PATH; temporary dependency environment settings below kept downloaded gems outside Git):
+
+```sh
+export BUNDLE_USER_HOME=/tmp/meetrail-p16-bundle
+export BUNDLE_PATH=/tmp/meetrail-p16-gems
+bundle install
+BUNDLE_FROZEN=true bundle check
+bundle exec fastlane lanes
+ruby -c fastlane/Fastfile
+ruby -c fastlane/Appfile
+ruby -c fastlane/ci_support.rb
+bundle exec ruby fastlane/ci_support_test.rb
+python3 -m unittest discover -s fastlane -p '*_test.py'
+python3 Tools/verify-architecture.py
+bundle exec fastlane mac verify
+# Exercise the lane's CI check signing behavior only; this does not enable publishing.
+GITHUB_ACTIONS=true bundle exec fastlane mac verify
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath build/ci-derived-data \
+  -parallel-testing-enabled NO \
+  -only-testing:MeetrailUITests/MeetrailUITests/testFirstStatusClickAfterLaunch \
+  -only-testing:MeetrailUITests/MeetrailUITests/testEmptyStateAndStatusItemDismissal test
+bundle exec fastlane run build_mac_app project:Meetrail.xcodeproj scheme:Meetrail \
+  configuration:Release destination:generic/platform=macOS \
+  archive_path:/tmp/MeetrailP16Signed.xcarchive output_directory:/tmp/meetrail-p16-archive \
+  buildlog_path:/tmp/meetrail-p16-archive-logs skip_package_pkg:true xcodebuild_formatter: \
+  xcargs:CURRENT_PROJECT_VERSION=12345678901001
+python3 fastlane/verify_distribution.py archive /tmp/MeetrailP16Signed.xcarchive 1.0 12345678901001
+git diff --check
+```
+
+`bundle exec fastlane mac beta` was also invoked without publishing context and correctly failed at the manual-main release guard before credentials, signing or upload. Logs are outside Git: `/tmp/meetrail-p16-verify.log`, `/tmp/meetrail-p16-ci-verify.log`, `/tmp/meetrail-p16-ui.log`, `/tmp/meetrail-p16-signed-archive.log`, `/tmp/meetrail-p16-beta-guard.log`. Derived data in ignored `build/` and the archives/packages/logs ignore patterns prevent generated artifacts from entering Git. The existing AppIntents metadata-extraction warning remains. Fastlane's xcodeproj dependency warns that project object version 110 is newer than its known 100, but it read the project and successfully orchestrated the archive; no project rewrite through that dependency is performed.
+
+### Signing investigation and remaining boundaries
+
+The initial restricted Debug shell could not see the existing development identity; a normal authorized Xcode build succeeded. A restricted unsigned archive also hit Icon Composer/CoreSimulator service errors; normal Xcode execution succeeded. A restricted signature verification returned `CSSMERR_TP_NOT_TRUSTED`; repeating the same read-only verification with normal trust-service access passed. These were local sandbox limitations, not evidence of a missing certificate or a cloud-signing defect.
+
+An unsigned Release archive diagnostic succeeded but contained no signed entitlement metadata or signing team. Fastlane 2.241.1's `skip_codesigning` implementation also explicitly clears `CODE_SIGN_ENTITLEMENTS`. Publishing therefore preserves normal automatic archive signing and passes the Team API Key to both archive and export. Xcode 27.0 (27A266a) help confirms `app-store-connect` and automatic export signing; legacy `app-store` is deprecated. Distribution export uses Xcode directly after Fastlane's archive. No entitlement removal, Developer ID signing, ad-hoc distribution, local certificate import or Match fallback was enabled.
+
+Cloud distribution signing does **not** establish whether the clean runner can archive without a local development identity or cloud sign the separate installer. Those remain unverified until the owner configures the existing macOS App Store Connect app, Admin **Team API Key** with provisioning/cloud-signing access, and the exact two variables/three secrets documented in [TESTFLIGHT.md](TESTFLIGHT.md), then explicitly authorizes and manually dispatches the workflow on `main`. The read-only provisioning preflight and actual signed export must validate this selected key. A failure must preserve the exact stage/diagnostic for key type/permissions, app/team setup, provisioning/cloud-signing access, app identity, installer identity, Xcode/Fastlane behavior or runner limitations. The setup guide documents a minimal existing-identity `.p12`/ephemeral-keychain fallback only after a verified limitation and owner approval; it is not enabled by default.
+
+CI excludes the existing real EventKit fixture integration and real-model inference test by explicit selection, without editing/weakening them or treating them as mocked live coverage. Real calendars/permissions, Apple Intelligence availability, conferencing services, macOS 15 execution and hosted GUI reliability remain manual. Upload success will mean transfer accepted; Apple processing, compliance and internal tester installability must be confirmed in App Store Connect separately. No App Store review, external tester distribution or external beta review is configured. End-to-end publishing is only verified after an authorized clean GitHub-hosted run exports a correctly signed macOS `.pkg` and uploads it successfully.
+
+### P16 follow-up — Raw App Store Connect private key (2026-10-25)
+
+The `testflight` Environment now supplies the original multiline `.p8` as **`ASC_API_KEY_P8`**. All encoded App Store Connect key handling and references were removed. The publishing shell writes the unchanged secret with `printf '%s'`, under `umask 077`, and explicitly sets the temporary `.p8` file to mode `600`. Fastlane receives `key_content` with `is_key_content_base64: false`; Xcode retains its authentication-file arguments. The helper validates the EC private key, restrictive file permissions and byte-for-byte agreement with the raw secret. Ruby `ensure` removes the file, with the existing EXIT trap and always-run workflow step removing the private directory even on failure. The separate, inactive binary `.p12` fallback recipe remains unchanged.
+
+Changed only `.github/workflows/publish-to-testflight.yml`, `fastlane/Fastfile`, `fastlane/ci_support.rb`, `fastlane/ci_support_test.rb`, `Docs/TESTFLIGHT.md`, and this validation log. Existing signing settings, release guards, concurrency, build numbering, upload options, dependencies and app code were preserved. Configure the new Environment secret by copying the original file with `pbcopy < /secure/path/AuthKey_YOURKEYID.p8`; paste its complete content, including the header/footer and real line breaks, then remove the obsolete encoded secret from GitHub manually.
+
+Validation passed: Ruby syntax checks for Fastfile, Appfile and both helper files; `bundle exec fastlane lanes`; workflow YAML/trigger/permissions/runner/Environment assertions; `bash -n` for every workflow shell step; actionlint with only the previously documented `xcode-27` label diagnostic suppressed; updated helper checks for raw multiline preservation, mode `600`, malformed-key rejection and failure cleanup; all three Python distribution-check tests; `python3 Tools/verify-architecture.py`; and `git diff --check`. `bundle exec fastlane mac verify` also passed normal signed Debug and Release builds and **41 deterministic tests in four suites**. Its log is `/tmp/meetrail-p16-raw-key-verify.log`. Prior focused UI results remain applicable; UI code and the shared scheme were not changed by this credential-format update.
+
+No real API key was available or generated for validation. App Store Connect authentication, cloud signing/export and TestFlight upload were not attempted; their previously documented verification limits remain. No GitHub secrets were changed remotely, and no commits or pushes were made.

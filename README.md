@@ -21,6 +21,8 @@ The P11 local signed suite passed 64 executions with no failures or skips, inclu
 
 ## Build and run
 
+Manual TestFlight publishing is configured in **Publish to TestFlight** (GitHub Actions + Fastlane). See [setup and first-run instructions](Docs/TESTFLIGHT.md). End-to-end signing and upload still require an authorized run with the owner's Team API Key.
+
 Open `Meetrail.xcodeproj`, select the Meetrail scheme and My Mac, and build/run. The existing automatic-signing configuration uses Team `WX557M9HD2` and Bundle ID `com.volrik.meetrail`; supply an authorized Mac Development certificate/private key for that team, or choose your own team and bundle ID for your local build.
 
 ```sh

@@ -1,0 +1,117 @@
+require "shellwords"
+require "open3"
+require "json"
+require_relative "ci_support"
+
+default_platform(:mac)
+
+platform :mac do
+  desc "Signing-independent CI checks; local runs use the existing development identity"
+  lane :verify do
+    Dir.chdir(MeetrailCI::ROOT) do
+      MeetrailCI.stage("Architecture check") { sh("python3", "Tools/verify-architecture.py") }
+      common = ["xcodebuild", "-project", "Meetrail.xcodeproj", "-scheme", "Meetrail",
+                "-destination", "platform=macOS", "-derivedDataPath", "build/ci-derived-data"]
+      # Only CI uses ad-hoc Debug test hosts; these are never distributed.
+      debug_signing = ENV["GITHUB_ACTIONS"] == "true" ? ["CODE_SIGN_IDENTITY=-", "CODE_SIGNING_REQUIRED=NO"] : []
+      MeetrailCI.stage("Debug build") { sh(*(common + ["-configuration", "Debug"] + debug_signing + ["build"])) }
+      MeetrailCI.stage("Deterministic unit tests") do
+        sh(*(common + ["-configuration", "Debug", "-parallel-testing-enabled", "NO",
+                       "-only-testing:MeetrailTests", "-skip-testing:MeetrailTests/CalendarIntegrationTests",
+                       "-skip-testing:MeetrailTests/StabilizationTests/realStructuredInferenceAndUnsupportedLanguage()"] +
+             debug_signing + ["test"]))
+      end
+      release_signing = ENV["GITHUB_ACTIONS"] == "true" ? ["CODE_SIGNING_ALLOWED=NO"] : []
+      MeetrailCI.stage("Release build") { sh(*(common + ["-configuration", "Release"] + release_signing + ["build"])) }
+      sh("git", "diff", "--check")
+    end
+  end
+
+  desc "Archive, sign automatically, verify the macOS pkg, and upload only (manual main workflow)"
+  lane :beta do
+    File.umask(0o077)
+    version = MeetrailCI.stage("Configuration validation") do
+      MeetrailCI.validate_release_context!
+      output, status = Open3.capture2("xcodebuild", "-project", "Meetrail.xcodeproj", "-scheme", "Meetrail",
+                                     "-configuration", "Release", "-showBuildSettings", "-json", chdir: MeetrailCI::ROOT)
+      UI.user_error!("Cannot read Release build settings") unless status.success?
+      settings = JSON.parse(output).find { |target| target["target"] == "Meetrail" }.fetch("buildSettings")
+      { "PRODUCT_BUNDLE_IDENTIFIER" => ENV.fetch("APP_IDENTIFIER"), "DEVELOPMENT_TEAM" => ENV.fetch("APPLE_TEAM_ID"),
+        "MARKETING_VERSION" => "1.0", "CODE_SIGN_STYLE" => "Automatic", "ENABLE_APP_SANDBOX" => "YES",
+        "ENABLE_HARDENED_RUNTIME" => "YES", "CODE_SIGN_INJECT_BASE_ENTITLEMENTS" => "NO",
+        "INFOPLIST_KEY_LSApplicationCategoryType" => "public.app-category.productivity" }.each do |name, expected|
+        UI.user_error!("Unexpected Release setting #{name}") unless settings[name] == expected
+      end
+      settings.fetch("MARKETING_VERSION")
+    end
+    FileUtils.mkdir_p(MeetrailCI::OUTPUT)
+    # Avoid selecting a stale package on a reused local checkout.
+    FileUtils.rm_rf(File.join(MeetrailCI::OUTPUT, "export"))
+    MeetrailCI.with_key do |key_path|
+      api_key = MeetrailCI.stage("API authentication and provisioning access") do
+        auth = app_store_connect_api_key(
+          key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+          key_content: ENV.fetch("ASC_API_KEY_P8"), is_key_content_base64: false, in_house: false
+        )
+        # Read-only preflight. Individual keys cannot use these provisioning endpoints.
+        ids = Spaceship::ConnectAPI.get_bundle_ids(filter: { identifier: ENV.fetch("APP_IDENTIFIER") }).all_pages
+        UI.user_error!("Register the existing macOS App ID in this API key's team first") if ids.empty?
+        Spaceship::ConnectAPI.get_certificates(limit: 1)
+        Spaceship::ConnectAPI.get_profiles(limit: 1)
+        auth
+      end
+      number = MeetrailCI.stage("Build number selection") do
+        latest = latest_testflight_build_number(
+          api_key: api_key, app_identifier: ENV.fetch("APP_IDENTIFIER"),
+          platform: "osx", version: version, initial_build_number: 0
+        )
+        # No rescue: authentication/API errors must never become 'first upload'.
+        MeetrailCI.build_number(latest, ENV["GITHUB_RUN_ID"], ENV["GITHUB_RUN_ATTEMPT"])
+      end
+      MeetrailCI.summary("\nVersion **#{version} (#{number})**; platform **macOS**.\n")
+      archive = File.join(MeetrailCI::OUTPUT, "Meetrail.xcarchive")
+      auth_args = ["-allowProvisioningUpdates", "-authenticationKeyPath", key_path,
+                   "-authenticationKeyID", ENV.fetch("ASC_KEY_ID"),
+                   "-authenticationKeyIssuerID", ENV.fetch("ASC_ISSUER_ID")]
+      MeetrailCI.stage("Release archive") do
+        # Keep the project's automatic signing and entitlements intact. A clean runner
+        # needing a local archive identity must fail here, never strip its capabilities.
+        build_mac_app(
+          project: "Meetrail.xcodeproj", scheme: "Meetrail", configuration: "Release",
+          destination: "generic/platform=macOS", clean: true, archive_path: archive,
+          output_directory: MeetrailCI::OUTPUT, buildlog_path: File.join(MeetrailCI::OUTPUT, "logs"),
+          skip_package_pkg: true, xcodebuild_formatter: "",
+          xcargs: (auth_args + ["CURRENT_PROJECT_VERSION=#{number}"]).shelljoin
+        )
+        sh("python3", File.join(MeetrailCI::ROOT, "fastlane/verify_distribution.py"), "archive", archive, version, number)
+      end
+      export_path = File.join(MeetrailCI::OUTPUT, "export")
+      MeetrailCI.stage("Automatic distribution signing and package export") do
+        options_path = File.join(MeetrailCI::OUTPUT, "ExportOptions.plist")
+        File.write(options_path, {
+          "method" => "app-store-connect", "destination" => "export", "signingStyle" => "automatic",
+          "teamID" => ENV.fetch("APPLE_TEAM_ID"), "manageAppVersionAndBuildNumber" => false
+        }.to_plist)
+        # Use Xcode's current export interface directly. Avoid gym's legacy export
+        # method validation/defaults; gym still orchestrates the Release archive above.
+        sh(*(["xcodebuild", "-exportArchive", "-archivePath", archive,
+              "-exportOptionsPlist", options_path, "-exportPath", export_path] + auth_args))
+      end
+      pkg = MeetrailCI.stage("Distribution app and installer signature verification") do
+        packages = Dir[File.join(export_path, "*.pkg")]
+        UI.user_error!("Expected exactly one exported macOS .pkg") unless packages.length == 1
+        sh("python3", File.join(MeetrailCI::ROOT, "fastlane/verify_distribution.py"), "package", packages.first, version, number)
+        packages.first
+      end
+      MeetrailCI.stage("TestFlight package upload") do
+        upload_to_testflight(
+          api_key: api_key, app_identifier: ENV.fetch("APP_IDENTIFIER"), app_platform: "osx", pkg: pkg,
+          skip_submission: true, skip_waiting_for_build_processing: true,
+          distribute_external: false, notify_external_testers: false
+        )
+      end
+      MeetrailCI.summary("- Apple processing: **pending / not polled**. Confirm processing, compliance, and internal tester availability in App Store Connect.")
+      UI.success("Uploaded macOS #{version} (#{number}). Apple processing and tester availability are not yet verified.")
+    end
+  end
+end
