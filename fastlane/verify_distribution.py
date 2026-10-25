@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import plistlib
 import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -62,6 +63,20 @@ def validate_entitlements(entitlements, identifier, team):
     for name in ("com.apple.application-identifier", "application-identifier"):
         if name in entitlements:
             require(entitlements[name] == f"{team}.{identifier}", "Entitlement application ID mismatch")
+
+
+def verify_payload_permissions(app):
+    """Installed files belong to root; other users must read and traverse the app."""
+    for path in [app, *app.rglob("*")]:
+        mode = path.lstat().st_mode
+        # Symlink mode bits do not control access; check the actual payload targets.
+        if stat.S_ISLNK(mode):
+            continue
+        required = stat.S_IROTH | stat.S_IXOTH if stat.S_ISDIR(mode) else stat.S_IROTH
+        require(mode & required == required,
+                f"Payload is not readable/traversable by installed users: "
+                f"{app.name}/{path.relative_to(app)} (mode {stat.S_IMODE(mode):04o}); "
+                "build and sign with umask 022 before exporting again")
 
 
 def verify_app(app, identifier, team, version, number, distribution):
@@ -179,6 +194,7 @@ def main():
             run("/usr/sbin/pkgutil", "--expand-full", path, str(expanded))
             apps = list(expanded.rglob("*.app"))
             require(len(apps) == 1 and apps[0].name == "Meetrail.app", "Unexpected application payload")
+            verify_payload_permissions(apps[0])
             verify_app(apps[0], identifier, team, version, number, True)
     else:
         raise ValueError("Unknown verification mode")

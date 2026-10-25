@@ -46,12 +46,17 @@ begin
     ENV["ASC_API_KEY_PATH"] = File.join(directory, "AuthKey.p8")
     raise "Key-file write failed" unless system("/bin/bash", "-c", <<~'SHELL')
       set -euo pipefail
-      umask 077
-      printf '%s' "$ASC_API_KEY_P8" > "$ASC_API_KEY_PATH"
+      (
+        umask 077
+        printf '%s' "$ASC_API_KEY_P8" > "$ASC_API_KEY_PATH"
+      )
       chmod 600 "$ASC_API_KEY_PATH"
+      umask 022
+      touch "${ASC_API_KEY_PATH}.public-resource"
     SHELL
     raise "Raw multiline content changed" unless File.binread(ENV["ASC_API_KEY_PATH"]) == ENV["ASC_API_KEY_P8"]
     raise "Incorrect key-file permissions" unless File.stat(ENV["ASC_API_KEY_PATH"]).mode & 0o777 == 0o600
+    raise "Restrictive signing umask" unless File.stat("#{ENV['ASC_API_KEY_PATH']}.public-resource").mode & 0o777 == 0o644
     rejects(OpenSSL::PKey::PKeyError) { MeetrailCI.with_key { raise "Must not reach the signing stage" } }
     raise "Temporary key file leaked" if File.exist?(ENV["ASC_API_KEY_PATH"])
   end

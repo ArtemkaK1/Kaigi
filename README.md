@@ -17,11 +17,15 @@ Meetrail is a native, source-available macOS MVP. The core runs on macOS 15 or n
 - On-device Clean Up and guided Structure, availability/language checks, preview before apply, original revisions, and deterministic injectable AI mocks. Structure rejects excerpts absent from the original input.
 - Optional private local reminders five minutes before meetings and launch-at-login controls.
 
-The P11 local signed suite passed 64 executions with no failures or skips, including real EventKit and eleven GUI tests. Real on-device Clean Up/Structure and own-account Google Meet entry were verified on the development Mac. Implementation is not a claim that every device-level scenario has passed. See [validation](Docs/VALIDATION.md) for actual results and remaining review checks.
+The P11 local signed suite passed 64 executions with no failures or skips, including real EventKit and eleven GUI tests. Real on-device Clean Up/Structure and own-account Google Meet entry were verified on the development Mac. Implementation is not a claim that every device-level scenario has passed.
 
 ## Build and run
 
-Manual TestFlight publishing is configured in **Publish to TestFlight** (GitHub Actions + Fastlane). See [setup and first-run instructions](Docs/TESTFLIGHT.md). End-to-end signing and upload still require an authorized run with the owner's Team API Key.
+Manual TestFlight publishing is configured in **Publish to TestFlight** (GitHub Actions + Fastlane). End-to-end signing and upload still require an authorized run with the owner's Team API Key.
+
+Archive/export uses `umask 022` so installed app resources remain readable by non-root users. The temporary API key remains `600` inside a `700` directory and is removed on failure too. Package verification rejects unreadable files or inaccessible directories before upload. Run 40223904838 passed archive/export and signature checks but Apple rejected the upload with error 90255; the permission fix still needs an authorized publishing run to verify acceptance and processing.
+
+Permission-fix validation: workflow/Ruby checks, 22 CI tests, 42 deterministic app tests, signed Debug/Release builds, architecture checks, and `git diff --check` passed locally. Synthetic packages confirmed that the permission check rejects signing resources created under `077` and accepts those created under `022`. UI, real-calendar, on-device AI, and distribution publishing were not rerun for this CI change.
 
 Open `Meetrail.xcodeproj`, select the Meetrail scheme and My Mac, and build/run. The existing automatic-signing configuration uses Team `WX557M9HD2` and Bundle ID `com.volrik.meetrail`; supply an authorized Mac Development certificate/private key for that team, or choose your own team and bundle ID for your local build.
 
@@ -45,6 +49,8 @@ Ad-hoc builds are for local review; they are not signed/notarized distribution a
 Only Apple / System Calendars connects today. Existing Google/Microsoft/CalDAV calendars already synchronized through macOS remain usable via EventKit. Direct Google, Microsoft, Yandex, Zoho, and CalDAV connections are Coming Soon and will be implemented separately; there are no OAuth clients, tokens, or fake authentication states.
 
 Debug-only `--sample --show-agenda` uses synthetic data without calendar access. Add `--onboarding --fifty-calendars` to review first run and 50 calendars across five accounts. `--empty`, `--one-meeting`, `--fifteen-meetings`, and `--long-titles` exercise layout. Optional `--test-session ID` persists synthetic onboarding/selection preferences across relaunch; sample notes are in memory. For XCTest Latin typing, select the ABC keyboard input source; restore your preferred source afterward.
+
+Folder cleanup validation (25 October 2026): the architecture check, signed Debug and Release builds, 43 deterministic unit tests, one synthetic UI smoke test, and `git diff --check` passed. Signing required keychain access outside the restricted shell. Real-calendar integration, on-device AI, external meeting entry, and distribution upload were not rerun for this documentation-only change.
 
 ## Use
 
@@ -71,7 +77,7 @@ Production events are always read-only. The local series and note UUIDs are inde
 
 Notes are stored in Meetrail's sandbox Application Support directory (the system SwiftData `default.store` and sidecars). Preserve the entire store together when backing up. There is no built-in cloud sync or custom encryption. Private drafts and revisions are never written into calendar events. See [SECURITY.md](SECURITY.md).
 
-`Tools/CalendarQA.swift` is separate from every app/test target. It creates attendee-free synthetic fixtures in `Meetrail QA` and writes an identifier manifest outside the repo. Its `--cleanup` path removes only manifest-listed, prefixed, attendee-free events and retains the calendar. See [QA instructions](Docs/QA.md).
+`Tools/CalendarQA.swift` is separate from every app/test target. It creates attendee-free synthetic fixtures in `Meetrail QA` and writes an identifier manifest outside the repo. Its `--cleanup` path removes only manifest-listed, prefixed, attendee-free events and retains the calendar.
 
 ## License and contribution rights
 

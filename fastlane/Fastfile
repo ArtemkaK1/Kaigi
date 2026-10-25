@@ -29,7 +29,9 @@ platform :mac do
 
   desc "Archive, sign automatically, verify the macOS pkg, and upload only (manual main workflow)"
   lane :beta do
-    File.umask(0o077)
+    # Export/signing creates new app resources; keep them readable after installation.
+    # The API key already has its own 600 file permissions inside a private directory.
+    File.umask(0o022)
     version = MeetrailCI.stage("Configuration validation") do
       MeetrailCI.validate_release_context!
       output, status = Open3.capture2("xcodebuild", "-project", "Meetrail.xcodeproj", "-scheme", "Meetrail",

@@ -1,13 +1,14 @@
 import base64
 import io
 from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from verify_distribution import (MAC_DISTRIBUTION_INSTALLER_POLICY, installer_certificates,
                                  validate_entitlements, validate_info, verify_installer_certificate_chain,
-                                 verify_package_signature, main)
+                                 verify_package_signature, verify_payload_permissions, main)
 
 
 class DistributionChecks(unittest.TestCase):
@@ -26,6 +27,46 @@ class DistributionChecks(unittest.TestCase):
                             ("com.apple.developer.team-identifier", "OTHERTEAM")]:
             with self.subTest(name=name), self.assertRaises(ValueError):
                 validate_entitlements(dict(self.entitlements, **{name: value}), "com.volrik.meetrail", "WX557M9HD2")
+
+    def test_readable_payload_and_framework_symlinks_pass(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "Meetrail.app"
+            resources = app / "Contents/_CodeSignature"
+            resources.mkdir(parents=True)
+            for directory in (app, app / "Contents", resources):
+                directory.chmod(0o755)
+            signature = resources / "CodeResources"
+            signature.write_text("synthetic signing metadata")
+            signature.chmod(0o644)
+            (app / "Contents/SignatureLink").symlink_to("_CodeSignature/CodeResources")
+            verify_payload_permissions(app)
+
+    def test_root_only_and_group_only_payload_files_fail_without_mutation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "Meetrail.app"
+            app.mkdir(mode=0o755)
+            app.chmod(0o755)
+            signature = app / "CodeResources"
+            signature.write_text("synthetic signing metadata")
+            for mode in (0o600, 0o640):
+                signature.chmod(mode)
+                with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "CodeResources.*umask 022"):
+                    verify_payload_permissions(app)
+                self.assertEqual(signature.stat().st_mode & 0o777, mode)
+
+    def test_payload_directories_require_public_read_and_traversal(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "Meetrail.app"
+            nested = app / "Contents"
+            nested.mkdir(parents=True)
+            app.chmod(0o755)
+            for directory in (app, nested):
+                for mode in (0o700, 0o750, 0o744, 0o711):
+                    directory.chmod(mode)
+                    with self.subTest(directory=directory.name, mode=mode), self.assertRaisesRegex(
+                            ValueError, "not readable/traversable"):
+                        verify_payload_permissions(app)
+                directory.chmod(0o755)
 
     def test_current_and_legacy_distribution_statuses_pass(self):
         for status in ["signed by a developer certificate issued by Apple for distribution",
@@ -146,6 +187,30 @@ class DistributionChecks(unittest.TestCase):
                 main()
             trust.assert_called_once_with("test.pkg")
             payload_command.assert_not_called()
+            app.assert_not_called()
+
+    def test_unreadable_exported_payload_stops_package_verification(self):
+        details = ("Status: signed by a developer certificate issued by Apple (Development)\n"
+                   "1. Mac Installer Distribution: Example (WX557M9HD2)")
+
+        def expand(*command):
+            self.assertEqual(command[:3], ("/usr/sbin/pkgutil", "--expand-full", "test.pkg"))
+            app = Path(command[3]) / "component.pkg/Payload/Meetrail.app"
+            app.mkdir(parents=True)
+            app.chmod(0o755)
+            signature = app / "CodeResources"
+            signature.write_text("synthetic signing metadata")
+            signature.chmod(0o600)
+
+        with patch("sys.argv", ["verify_distribution.py", "package", "test.pkg", "1.0", "123"]), \
+                patch("sys.stdout", new_callable=io.StringIO), \
+                patch("verify_distribution.subprocess.run", return_value=SimpleNamespace(
+                    returncode=0, stdout=details.encode(), stderr=b"")), \
+                patch("verify_distribution.verify_installer_certificate_chain"), \
+                patch("verify_distribution.run", side_effect=expand), \
+                patch("verify_distribution.verify_app") as app:
+            with self.assertRaisesRegex(ValueError, "CodeResources.*umask 022"):
+                main()
             app.assert_not_called()
 
     def test_failed_tool_and_missing_or_ambiguous_status_fail(self):

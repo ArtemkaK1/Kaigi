@@ -11,6 +11,6 @@ The existing Xcode synchronized Meetrail group includes AppIcon.icon automatical
 
 Validated on macOS 26.6.2 with Xcode 27.0: signed Debug/Release builds; 42 reported deterministic unit tests across four suites; two focused GUI tests; actual compiled fallback artwork at 256/32/16 pixels; Finder Get Info for the signed Release app; Composer Default/Dark/Mono previews. No application Swift code, status item icon, schema, permissions or dependency settings changed.
 
-Remaining: Clear/Tinted light/dark Composer previews, varied photographic wallpapers/lighting angles, macOS 15 runtime, distribution signing/notarization and store delivery. Static review files and screenshots remain outside Git in this session's meetrail-icon-exploration/a2-production-proof directory. See Docs/VALIDATION.md for commands, logs and scope.
+Remaining: Clear/Tinted light/dark Composer previews, varied photographic wallpapers/lighting angles, macOS 15 runtime, distribution signing/notarization and store delivery. Static review files and screenshots remain outside Git in this session's meetrail-icon-exploration/a2-production-proof directory.
 
 Apple route documentation: https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer

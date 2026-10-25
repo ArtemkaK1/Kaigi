@@ -75,9 +75,13 @@ jobs:
           mkdir -m 700 "$TMPDIR"
           trap 'rm -rf -- "$TMPDIR"' EXIT
           export ASC_API_KEY_PATH="$TMPDIR/AuthKey.p8"
-          umask 077
-          printf '%s' "$ASC_API_KEY_P8" > "$ASC_API_KEY_PATH"
+          (
+            umask 077
+            printf '%s' "$ASC_API_KEY_P8" > "$ASC_API_KEY_PATH"
+          )
           chmod 600 "$ASC_API_KEY_PATH"
+          # Signing must create app resources readable by every installed user.
+          umask 022
           bundle exec fastlane mac beta
 
       - name: Clean temporary credentials
