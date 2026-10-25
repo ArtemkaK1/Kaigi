@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   publish:
+    name: Publish app
     if: github.ref == 'refs/heads/main'
     runs-on: xcode-27
     environment: testflight
@@ -61,7 +62,7 @@ jobs:
       - name: Architecture, Debug build, deterministic unit tests, Release build
         run: bundle exec fastlane mac verify
 
-      - name: Archive, automatic signing, package verification, TestFlight upload
+      - name: Publish app
         id: publish_release
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
