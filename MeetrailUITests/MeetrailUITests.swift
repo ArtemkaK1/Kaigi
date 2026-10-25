@@ -161,7 +161,7 @@ import AppKit
             XCTAssertFalse(app.buttons["Quit"].exists)
             XCTAssertFalse(app.buttons["Saved notes"].exists)
             if count == "--one-meeting" {
-                XCTAssertLessThanOrEqual(panel.frame.maxY - cards.firstMatch.frame.maxY, 32, "No redundant footer or titlebar space below the card")
+                XCTAssertLessThanOrEqual(panel.frame.maxY - cards.firstMatch.frame.maxY, 32 + 8, "Compact footer allowance plus the requested 8 pt bottom padding")
                 XCTAssertLessThan(panel.frame.height, 240, "The panel fits one rendered card")
             }
             if count == "--fifteen-meetings" { app.scrollViews.firstMatch.swipeUp(); XCTAssertTrue(cards.count > 1) }

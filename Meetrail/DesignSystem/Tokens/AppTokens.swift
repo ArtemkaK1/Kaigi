@@ -98,7 +98,8 @@ private struct AppTextModifier: ViewModifier {
     @ScaledMetric(relativeTo: .title) private var title = 20
     private var size: Double { switch role { case .caption: caption; case .body: body; case .section: section; case .title: title } }
     func body(content: Content) -> some View {
-        content.font(.system(size: max(size, role.baseSize * AppTypography.scale(for: dynamicTypeSize)), weight: weight.fontWeight))
+        content
+            .font(.system(size: max(size, role.baseSize * AppTypography.scale(for: dynamicTypeSize)), weight: weight.fontWeight))
     }
 }
 extension View {

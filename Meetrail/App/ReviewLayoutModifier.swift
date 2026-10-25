@@ -5,8 +5,11 @@ struct ReviewLayoutModifier: ViewModifier {
     func body(content: Content) -> some View {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--large-text") {
-            content.environment(\.dynamicTypeSize, .accessibility1)
-        } else { content }
+            content
+                .environment(\.dynamicTypeSize, .accessibility1)
+        } else {
+            content
+        }
         #else
         content
         #endif

@@ -8,8 +8,15 @@ struct FittingScrollView<Content: View>: View {
     @State private var contentHeight: CGFloat = 1
     var body: some View {
         ScrollView {
-            content().frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
-        }.frame(height: min(contentHeight, maximumHeight))
+            content()
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    contentHeight = $0
+                }
+        }
+        .frame(height: min(contentHeight, maximumHeight))
     }
 }

@@ -26,12 +26,18 @@ struct ProviderIcon: View {
     var body: some View {
         Group {
             if let artwork {
-                artwork.resizable().renderingMode(.original).scaledToFit()
+                artwork
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
             } else {
                 Image(systemName: kind == .calDAV ? "network" : "calendar")
-                    .resizable().scaledToFit().foregroundStyle(AppColors.secondary)
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(AppColors.secondary)
             }
-        }.frame(width: AppLayout.providerIconSize * AppTypography.scale(for: textSize), height: AppLayout.providerIconSize * AppTypography.scale(for: textSize))
-            .accessibilityHidden(true)
+        }
+        .frame(width: AppLayout.providerIconSize * AppTypography.scale(for: textSize), height: AppLayout.providerIconSize * AppTypography.scale(for: textSize))
+        .accessibilityHidden(true)
     }
 }

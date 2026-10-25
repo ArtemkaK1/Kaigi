@@ -90,9 +90,12 @@ import SwiftUI
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--constrained-height") { maximumHeight = min(maximumHeight, AppLayout.reviewHeight) }
         #endif
-        let host = NSHostingController(rootView: AgendaView(model: container.agenda!, maximumHeight: maximumHeight, onHeightChange: { [weak self] height in
-            self?.resizeAgenda(height: height)
-        }).modifier(ReviewLayoutModifier())); host.sizingOptions = []
+        let host = NSHostingController(
+            rootView: AgendaView(model: container.agenda!, maximumHeight: maximumHeight, onHeightChange: { [weak self] height in
+                self?.resizeAgenda(height: height)
+            })
+                .modifier(ReviewLayoutModifier())
+        ); host.sizingOptions = []
         agendaPopover.contentViewController = host
         agendaPopover.contentSize = NSSize(width: AppLayout.panelWidth, height: AppLayout.emptyHeight)
         for name in [NSNotification.Name.NSCalendarDayChanged, NSNotification.Name.NSSystemTimeZoneDidChange] {
@@ -186,7 +189,11 @@ import SwiftUI
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         window.title = title; window.isReleasedWhenClosed = false; window.minSize = NSSize(width: 480, height: 360); window.delegate = self
         let calendarArtwork = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal").map { Image(nsImage: NSWorkspace.shared.icon(forFile: $0.path)) }
-        let host = NSHostingController(rootView: root.environment(\.systemCalendarArtwork, calendarArtwork).modifier(ReviewLayoutModifier())); host.sizingOptions = []; window.contentViewController = host
+        let host = NSHostingController(
+            rootView: root
+                .environment(\.systemCalendarArtwork, calendarArtwork)
+                .modifier(ReviewLayoutModifier())
+        ); host.sizingOptions = []; window.contentViewController = host
         window.setContentSize(NSSize(width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight)); window.center(); return window
     }
     func showFloatingNote(_ id: NoteID) {
@@ -196,7 +203,12 @@ import SwiftUI
             let panel = AgendaPanel(contentRect: NSRect(x: 160, y: 180, width: AppLayout.notesWidth, height: AppLayout.detailHeight), styleMask: [.titled, .closable, .resizable, .utilityWindow], backing: .buffered, defer: false)
             panel.title = "Meetrail — \(detail.note.title)"; panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
             panel.isReleasedWhenClosed = false; panel.minSize = NSSize(width: 320, height: 400); panel.delegate = self
-            let host = NSHostingController(rootView: ScrollView { NoteEditorView(model: detail) }.tint(AppColors.accent)); host.sizingOptions = []
+            let host = NSHostingController(
+                rootView: ScrollView {
+                    NoteEditorView(model: detail)
+                }
+                .tint(AppColors.accent)
+            ); host.sizingOptions = []
             panel.contentViewController = host; floatingPanels[id] = panel; NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil)
         } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
     }

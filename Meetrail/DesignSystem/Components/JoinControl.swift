@@ -6,21 +6,40 @@ struct JoinControl: View {
     var body: some View {
         Group {
             if links.count == 1, let link = links.first, link.recognized {
-                Button("Join") { action(link) }.accessibilityLabel("Join \(link.provider)")
+                Button("Join") {
+                    action(link)
+                }
+                .accessibilityLabel("Join \(link.provider)")
             } else if !links.isEmpty {
-                Menu("Links") { ForEach(links) { link in Button("\(link.provider) · \(link.url.host ?? "")") { action(link) } } }
-                    .menuIndicator(.hidden).help("Choose a calendar link and verify its destination")
+                Menu("Links") {
+                    ForEach(links) { link in
+                        Button("\(link.provider) · \(link.url.host ?? "")") {
+                            action(link)
+                        }
+                    }
+                }
+                .menuIndicator(.hidden)
+                .help("Choose a calendar link and verify its destination")
             }
-        }.buttonStyle(MeetrailButtonStyle(prominent: true, size: .conference)).controlSize(.small).appText(.caption, weight: .medium)
+        }
+        .buttonStyle(MeetrailButtonStyle(prominent: true, size: .conference))
+        .controlSize(.small)
+        .appText(.caption, weight: .medium)
     }
 }
 struct SymbolButton: View {
     let symbol: String
     let label: String
+    var showsBorder = true
     let action: () -> Void
     var body: some View {
-        Button(action: action) { Image(systemName: symbol) }
-            .buttonStyle(MeetrailButtonStyle(size: .icon)).appText(.body, weight: .medium).accessibilityLabel(label).help(label)
+        Button(action: action) {
+            Image(systemName: symbol)
+        }
+        .buttonStyle(MeetrailButtonStyle(size: .icon, showsBorder: showsBorder))
+        .appText(.body, weight: .medium)
+        .accessibilityLabel(label)
+        .help(label)
     }
 }
 struct InlineMessage: View {
@@ -28,7 +47,8 @@ struct InlineMessage: View {
     var isError = false
     var body: some View {
         Label(text, systemImage: isError ? "exclamationmark.circle" : "info.circle")
-            .appText(.caption).foregroundStyle(isError ? AppColors.error : AppColors.secondary)
+            .appText(.caption)
+            .foregroundStyle(isError ? AppColors.error : AppColors.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -39,6 +59,7 @@ extension AppColors {
 struct MeetrailButtonStyle: ButtonStyle {
     var prominent = false
     var size: AppButtonSize = .regular
+    var showsBorder = true
     @ScaledMetric(relativeTo: .body) private var nativeScale = 100
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private var scale: CGFloat { max(nativeScale / 100, AppTypography.scale(for: dynamicTypeSize)) }
@@ -50,7 +71,13 @@ struct MeetrailButtonStyle: ButtonStyle {
             .frame(minWidth: size.width * scale, maxWidth: size.hasFixedWidth ? size.width * scale : nil, minHeight: size.height * scale)
             .foregroundStyle(enabled ? (prominent ? AppColors.onAccent : AppColors.accent) : AppColors.disabled)
             .background(prominent && enabled ? AppColors.accent : (configuration.isPressed ? AppColors.selected : AppColors.surface), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
-            .overlay { RoundedRectangle(cornerRadius: AppLayout.cornerRadius).strokeBorder(AppColors.border, lineWidth: 1).allowsHitTesting(false) }
+            .overlay {
+                    if showsBorder {
+                        RoundedRectangle(cornerRadius: AppLayout.cornerRadius)
+                            .strokeBorder(AppColors.border, lineWidth: 1)
+                            .allowsHitTesting(false)
+                    }
+                }
             .contentShape(RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
