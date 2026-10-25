@@ -111,6 +111,9 @@ platform :mac do
         )
       end
       MeetrailCI.summary("- Apple processing: **pending / not polled**. Confirm processing, compliance, and internal tester availability in App Store Connect.")
+      # Expose the uploaded number only after pilot returned successfully. The
+      # separate write-back job has GitHub write access and no Apple credentials.
+      MeetrailCI.published_outputs(number, version)
       UI.success("Uploaded macOS #{version} (#{number}). Apple processing and tester availability are not yet verified.")
     end
   end

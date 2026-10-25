@@ -59,4 +59,17 @@ ensure
   ENV["ASC_API_KEY_P8"] = original
   ENV["ASC_API_KEY_PATH"] = original_path
 end
+original_output = ENV["GITHUB_OUTPUT"]
+begin
+  Dir.mktmpdir("meetrail-output-test-") do |directory|
+    ENV["GITHUB_OUTPUT"] = File.join(directory, "outputs")
+    MeetrailCI.published_outputs("40185690362002", "1.0")
+    raise "Unexpected publish outputs" unless File.read(ENV["GITHUB_OUTPUT"]) ==
+      "build_number=40185690362002\nmarketing_version=1.0\n"
+    rejects { MeetrailCI.published_outputs("1\nOTHER=2", "1.0") }
+    rejects { MeetrailCI.published_outputs("2", "1.0\nOTHER=2") }
+  end
+ensure
+  ENV["GITHUB_OUTPUT"] = original_output
+end
 puts "PASS: build numbering, release guard, raw multiline key handling, permissions and failure cleanup"

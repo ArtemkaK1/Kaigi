@@ -55,6 +55,15 @@ module MeetrailCI
     File.open(ENV["GITHUB_STEP_SUMMARY"], "a") { |file| file.puts(message) } if ENV["GITHUB_STEP_SUMMARY"]
   end
 
+  def self.published_outputs(number, version)
+    raise "Invalid published build output" unless number.match?(/\A[1-9]\d{0,17}\z/)
+    raise "Invalid published version output" unless version.match?(/\A\d+(?:\.\d+){1,2}\z/)
+    File.open(required("GITHUB_OUTPUT"), "a") do |file|
+      file.puts("build_number=#{number}")
+      file.puts("marketing_version=#{version}")
+    end
+  end
+
   def self.stage(name)
     puts "::group::#{name}" if ENV["GITHUB_ACTIONS"] == "true"
     result = yield

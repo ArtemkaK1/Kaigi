@@ -16,6 +16,9 @@ jobs:
     runs-on: xcode-27
     environment: testflight
     timeout-minutes: 60
+    outputs:
+      build_number: ${{ steps.publish_release.outputs.build_number }}
+      marketing_version: ${{ steps.publish_release.outputs.marketing_version }}
     env:
       FASTLANE_SKIP_UPDATE_CHECK: '1'
       FASTLANE_HIDE_CHANGELOG: '1'
@@ -59,6 +62,7 @@ jobs:
         run: bundle exec fastlane mac verify
 
       - name: Archive, automatic signing, package verification, TestFlight upload
+        id: publish_release
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -80,10 +84,51 @@ jobs:
         shell: bash
         run: rm -rf -- "$RUNNER_TEMP/meetrail-publish-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 
-      - name: Report workflow result
+      - name: Report publishing result
         if: always()
         env:
           JOB_STATUS: ${{ job.status }}
         run: |
-          printf '\nWorkflow result: **%s**. See the individual stages above.\n' "$JOB_STATUS" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nPublishing job result: **%s**. Build-number write-back is reported separately.\n' "$JOB_STATUS" >> "$GITHUB_STEP_SUMMARY"
           printf 'Apple processing and tester availability must be confirmed in App Store Connect.\n' >> "$GITHUB_STEP_SUMMARY"
+
+  record-build-number:
+    name: Record uploaded build number on main
+    needs: publish
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out current main for build-number write-back
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Record and push the uploaded build number
+        env:
+          BUILD_NUMBER: ${{ needs.publish.outputs.build_number }}
+          MARKETING_VERSION: ${{ needs.publish.outputs.marketing_version }}
+          RELEASE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_file=Meetrail.xcodeproj/project.pbxproj
+          python3 fastlane/record_build_number.py "$project_file" "$BUILD_NUMBER" "$MARKETING_VERSION" | tee -a "$GITHUB_STEP_SUMMARY"
+          git diff --check
+          if git diff --quiet -- "$project_file"; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$project_file"
+          git commit -m "ci: record TestFlight build $BUILD_NUMBER" -m "Uploaded version $MARKETING_VERSION from $RELEASE_SHA."
+          git push origin HEAD:main
+          printf '\nBuild **%s** recorded on main. Apple processing remains separate.\n' "$BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report build-number write-back failure
+        if: failure()
+        run: |
+          printf '\n**Build-number write-back failed after the TestFlight upload succeeded.** Check branch permissions or a concurrent main update, then rerun only the failed job.\n' >> "$GITHUB_STEP_SUMMARY"

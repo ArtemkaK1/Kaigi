@@ -534,3 +534,34 @@ Changed only `.github/workflows/publish-to-testflight.yml`, `fastlane/Fastfile`,
 Validation passed: Ruby syntax checks for Fastfile, Appfile and both helper files; `bundle exec fastlane lanes`; workflow YAML/trigger/permissions/runner/Environment assertions; `bash -n` for every workflow shell step; actionlint with only the previously documented `xcode-27` label diagnostic suppressed; updated helper checks for raw multiline preservation, mode `600`, malformed-key rejection and failure cleanup; all three Python distribution-check tests; `python3 Tools/verify-architecture.py`; and `git diff --check`. `bundle exec fastlane mac verify` also passed normal signed Debug and Release builds and **41 deterministic tests in four suites**. Its log is `/tmp/meetrail-p16-raw-key-verify.log`. Prior focused UI results remain applicable; UI code and the shared scheme were not changed by this credential-format update.
 
 No real API key was available or generated for validation. App Store Connect authentication, cloud signing/export and TestFlight upload were not attempted; their previously documented verification limits remain. No GitHub secrets were changed remotely, and no commits or pushes were made.
+
+### P16 follow-up — Installer verification and automatic build-number write-back (2026-10-25)
+
+The owner's [first hosted run, 40185690362](https://github.com/ArtemkaK1/Meetrail/actions/runs/40185690362/job/121145890960), passed the Xcode 27.1 toolchain check, Debug/Release builds, 41 deterministic tests, raw Team API Key authentication/provisioning access, signed archive verification, and `xcodebuild -exportArchive`. It failed in our package verifier at `Installer signature is not trusted`, before payload verification or upload. The verifier had required a single legacy `pkgutil` phrase and suppressed the actual status. No package artifact was retained, so that run's precise installer status remains unavailable; export success alone is not proof of all distribution checks.
+
+Corrected `verify_package_signature` to accept the current `signed by a developer certificate issued by Apple for distribution` classification plus the recognized legacy macOS/Mac OS X trust statuses. It still requires `pkgutil` exit zero and a Mac Installer Distribution leaf certificate for `WX557M9HD2`. Leaf selection is now anchored to certificate 1 rather than matching any line in the chain. Unknown, ambiguous, missing, unsigned, invalid, revoked, expired, development, local-user/system trust, Developer ID Installer, and wrong-team results are rejected. Rejection includes the actual status and tool exit code; successful verification reports the status without dumping certificates or profile data. App signature, sandbox/calendar entitlements, metadata and package-payload checks remain enabled.
+
+The owner explicitly requested automatic build-number commits on `main`, superseding the earlier no-generated-build-commits pipeline design. Fastlane now emits only the exact successfully uploaded build number and marketing version as publishing-step outputs, after `upload_to_testflight` returns. A dependent Linux job checks out current `main`, updates only the app target's Debug and Release `CURRENT_PROJECT_VERSION` values, commits that single project file as `github-actions[bot]`, and performs a normal push to `main`. Only this job has `contents: write` and persisted Git checkout authentication; the macOS publishing job retains read-only GitHub access and disabled credential persistence. The write-back job receives no Apple secrets and introduces no new secret or dependency. Workflow concurrency covers both jobs, and bot commits do not trigger the manual-only workflow.
+
+The editor preserves marketing version and all other file content, rejects unexpected project structure or a changed marketing version, avoids duplicate edits on repeat runs, and never reduces a newer build number. It checks all configurations before writing a file. Checking out current `main` preserves commits made during the upload; a later concurrent change can cause a non-fast-forward push rejection, which is reported rather than force-pushed. Branch rules or Actions policy can also block the bot. In either case, the upload has already succeeded: resolve write-back permissions/races and rerun only the failed job. No branch-protection settings were changed or bypassed.
+
+Changed `.github/workflows/publish-to-testflight.yml`, `fastlane/Fastfile`, `fastlane/ci_support.rb`, `fastlane/ci_support_test.rb`, `fastlane/verify_distribution.py`, `fastlane/verify_distribution_test.py`, `Docs/TESTFLIGHT.md`, and this log. Added `fastlane/record_build_number.py` and `fastlane/record_build_number_test.py`. The local app project, app source, existing app tests, Gemfile and Gemfile.lock remain unchanged. No local or remote commit/push, certificate action, or publishing rerun was performed; the configured future bot write-back is the specifically authorized commit behavior.
+
+Validation commands and results:
+
+```sh
+python3 -m unittest discover -s fastlane -p '*_test.py' -v
+bundle exec ruby fastlane/ci_support_test.rb
+ruby -c fastlane/Fastfile
+ruby -c fastlane/Appfile
+ruby -c fastlane/ci_support.rb
+ruby -c fastlane/ci_support_test.rb
+bundle exec fastlane lanes
+python3 Tools/verify-architecture.py
+bundle exec fastlane mac verify
+git diff --check
+```
+
+All **11 Python CI regression tests** passed, covering modern and legacy signature output, negative trust/identity cases, nonzero tool exits, missing/ambiguous diagnostics, two-setting project updates, idempotence, newer-number preservation, version/layout guards, invalid output injection, and the actual editor CLI against temporary files. Ruby helper checks passed for published outputs and newline-injection rejection, along with the existing credential/numbering checks. Ruby syntax, Fastlane loading, architecture and whitespace checks passed. Workflow YAML and every shell step parsed successfully; dependency and permission assertions confirmed write access is confined to the dependent job. actionlint passed with only the previously documented unsupported-in-its-runner-list `xcode-27` diagnostic suppressed.
+
+Normal automatically signed Debug and Release builds and **41 deterministic app tests in four suites** passed via `fastlane mac verify`; the log is `/tmp/meetrail-p16-verifier-writeback-verify.log`. No UI code or scheme changed, so focused GUI tests were not repeated for these CI-only changes. No real distribution package was available for the corrected verifier, and no upload or GitHub bot push was executed. The new end-to-end export/signature/payload/upload/write-back path still requires an authorized workflow run after the owner publishes the reviewed configuration. Apple processing and tester availability remain separate from upload and metadata write-back success.

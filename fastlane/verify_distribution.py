@@ -80,10 +80,22 @@ def verify_app(app, identifier, team, version, number, distribution):
                     "Development provisioning profile")
 
 
-def verify_package_signature(details, team):
-    require("Status: signed by a certificate trusted by" in details, "Installer signature is not trusted")
-    require(re.search(r"(?:3rd Party Mac Developer Installer|Mac Installer Distribution):[^\n]*\(" +
-                      re.escape(team) + r"\)", details), "Installer lacks the team's Mac Installer Distribution signature")
+def verify_package_signature(details, team, returncode=0):
+    statuses = re.findall(r"^[ \t]*Status:[ \t]*([^\r\n]+)", details, re.MULTILINE)
+    status = statuses[0].strip() if len(statuses) == 1 else "<missing or ambiguous>"
+    # pkgutil has several successful classifications, not just the older generic
+    # trust wording. Local user/system trust and development signatures are excluded.
+    trusted = {
+        "signed by a developer certificate issued by Apple for distribution",
+        "signed by a certificate trusted by macOS",
+        "signed by a certificate trusted by Mac OS X",
+    }
+    require(returncode == 0 and status in trusted,
+            f"Installer signature is not trusted (pkgutil exit {returncode}; status: {status})")
+    require(re.search(r"^[ \t]*1\.[ \t]+(?:3rd Party Mac Developer Installer|Mac Installer Distribution):"
+                      r"[^\r\n]+\(" + re.escape(team) + r"\)[ \t]*$", details, re.MULTILINE),
+            f"Installer lacks the team's Mac Installer Distribution leaf signature (pkgutil status: {status})")
+    return status
 
 
 def main():
@@ -95,8 +107,10 @@ def main():
     if mode == "archive":
         verify_app(Path(path) / "Products/Applications/Meetrail.app", identifier, team, version, number, False)
     elif mode == "package":
-        signature = run("/usr/sbin/pkgutil", "--check-signature", path).stdout.decode()
-        verify_package_signature(signature, team)
+        signature = subprocess.run(["/usr/sbin/pkgutil", "--check-signature", path],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        status = verify_package_signature(signature.stdout.decode(errors="replace"), team, signature.returncode)
+        print(f"Installer signature status: {status}")
         with tempfile.TemporaryDirectory(prefix="meetrail-package-") as temporary:
             expanded = Path(temporary) / "expanded"
             run("/usr/sbin/pkgutil", "--expand-full", path, str(expanded))
