@@ -81,6 +81,32 @@ class DistributionChecks(unittest.TestCase):
             with self.subTest(toc=invalid), self.assertRaises(ValueError):
                 installer_certificates(invalid)
 
+    def test_cms_only_legacy_and_combined_xar_signatures(self):
+        data = '<KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#"><X509Data>' \
+               '<X509Certificate>bGVhZg==</X509Certificate><X509Certificate>cm9vdA==</X509Certificate>' \
+               '</X509Data></KeyInfo>'
+        legacy = f'<signature style="RSA">{data}</signature>'
+        cms = f'<x-signature style="CMS">{data}</x-signature>'
+        for signatures in [legacy, cms, legacy + cms, cms + legacy]:
+            for namespace in ['', ' xmlns="urn:xar"']:
+                with self.subTest(signatures=signatures, namespace=namespace):
+                    toc = f'<xar{namespace}><toc>{signatures}</toc></xar>'
+                    self.assertEqual(installer_certificates(toc), [b"leaf", b"root"])
+
+    def test_duplicate_signatures_and_conflicting_signer_chains_fail(self):
+        data = '<KeyInfo><X509Data><X509Certificate>bGVhZg==</X509Certificate></X509Data></KeyInfo>'
+        legacy = f'<signature style="RSA">{data}</signature>'
+        cms = f'<x-signature style="CMS">{data}</x-signature>'
+        for signatures, diagnostic in [
+            (legacy + legacy, "signature=2; x-signature=0"),
+            (cms + cms, "signature=0; x-signature=2"),
+            (legacy + cms.replace("bGVhZg==", "b3RoZXI="), "conflicting certificate chains"),
+            (cms.replace("bGVhZg==", ""), "empty certificate"),
+        ]:
+            with self.subTest(signatures=signatures), self.assertRaises(ValueError) as failure:
+                installer_certificates(f'<xar><toc>{signatures}</toc></xar>')
+            self.assertIn(diagnostic, str(failure.exception))
+
     def test_mac_distribution_policy_is_mandatory_and_temporary_certificates_are_removed(self):
         for exit_code in (0, 1):
             paths = []

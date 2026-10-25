@@ -118,13 +118,26 @@ def verify_package_signature(details, team, returncode=0):
 def installer_certificates(toc):
     """Read public signing certificates from the same XAR signature pkgutil checks."""
     root = ET.fromstring(toc)
-    signatures = root.findall("./toc/signature")
-    require(len(signatures) == 1, "Expected exactly one installer XAR signature")
-    nodes = signatures[0].findall("./{*}KeyInfo/{*}X509Data/{*}X509Certificate")
-    require(1 <= len(nodes) <= 8, "Installer signature has a missing or unexpected certificate chain")
+    legacy = root.findall("./{*}toc/{*}signature")
+    extended = root.findall("./{*}toc/{*}x-signature")
+    layout = f"signature={len(legacy)}; x-signature={len(extended)}"
+    require(bool(legacy or extended) and len(legacy) <= 1 and len(extended) <= 1,
+            f"Missing or ambiguous installer XAR signatures ({layout})")
+    chains = []
     # Only public X.509 data is encoded in the XAR table of contents. The App Store
     # Connect private .p8 secret remains raw and never enters this parsing path.
-    return [base64.b64decode("".join((node.text or "").split()), validate=True) for node in nodes]
+    for signature in legacy + extended:
+        nodes = signature.findall("./{*}KeyInfo/{*}X509Data/{*}X509Certificate")
+        require(1 <= len(nodes) <= 8,
+                f"Installer signature has a missing or unexpected certificate chain ({layout}; certificates={len(nodes)})")
+        chain = [base64.b64decode("".join((node.text or "").split()), validate=True) for node in nodes]
+        require(all(chain), f"Installer signature contains an empty certificate ({layout})")
+        chains.append(chain)
+    # RSA + CMS packages are valid, but do not silently validate one signer while
+    # pkgutil reports another. Both representations must carry the same chain.
+    require(all(chain == chains[0] for chain in chains),
+            f"Installer XAR signatures contain conflicting certificate chains ({layout})")
+    return chains[0]
 
 
 def verify_installer_certificate_chain(package):
