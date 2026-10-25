@@ -92,8 +92,8 @@ jobs:
           printf '\nPublishing job result: **%s**. Build-number write-back is reported separately.\n' "$JOB_STATUS" >> "$GITHUB_STEP_SUMMARY"
           printf 'Apple processing and tester availability must be confirmed in App Store Connect.\n' >> "$GITHUB_STEP_SUMMARY"
 
-  record-build-number:
-    name: Record uploaded build number on main
+  prepare-next-build:
+    name: Prepare next build number on main
     needs: publish
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -107,26 +107,27 @@ jobs:
           ref: main
           persist-credentials: true
 
-      - name: Record and push the uploaded build number
+      - name: Prepare and push the next build number
         env:
-          BUILD_NUMBER: ${{ needs.publish.outputs.build_number }}
+          UPLOADED_BUILD_NUMBER: ${{ needs.publish.outputs.build_number }}
           MARKETING_VERSION: ${{ needs.publish.outputs.marketing_version }}
           RELEASE_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
           project_file=Meetrail.xcodeproj/project.pbxproj
-          python3 fastlane/record_build_number.py "$project_file" "$BUILD_NUMBER" "$MARKETING_VERSION" | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 fastlane/prepare_next_build.py "$project_file" "$UPLOADED_BUILD_NUMBER" "$MARKETING_VERSION" | tee -a "$GITHUB_STEP_SUMMARY"
           git diff --check
           if git diff --quiet -- "$project_file"; then
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          next_build_number="$((UPLOADED_BUILD_NUMBER + 1))"
           git add -- "$project_file"
-          git commit -m "ci: record TestFlight build $BUILD_NUMBER" -m "Uploaded version $MARKETING_VERSION from $RELEASE_SHA."
+          git commit -m "ci: prepare build $next_build_number" -m "After TestFlight upload $MARKETING_VERSION ($UPLOADED_BUILD_NUMBER) from $RELEASE_SHA."
           git push origin HEAD:main
-          printf '\nBuild **%s** recorded on main. Apple processing remains separate.\n' "$BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nNext build **%s** prepared on main after upload **%s**. Apple processing remains separate.\n' "$next_build_number" "$UPLOADED_BUILD_NUMBER" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report build-number write-back failure
         if: failure()

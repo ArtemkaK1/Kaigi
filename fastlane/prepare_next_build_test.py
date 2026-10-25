@@ -5,10 +5,10 @@ import sys
 import tempfile
 import unittest
 
-from record_build_number import updated_project
+from prepare_next_build import updated_project
 
 
-class BuildNumberWriteBack(unittest.TestCase):
+class NextBuildNumberPreparation(unittest.TestCase):
     def setUp(self):
         project = (Path(__file__).resolve().parents[1] / "Meetrail.xcodeproj/project.pbxproj").read_text()
         # Future bot commits must not change the meaning of the regression fixtures.
@@ -22,8 +22,14 @@ class BuildNumberWriteBack(unittest.TestCase):
         self.assertEqual(len(before), len(after))
         self.assertEqual(len(changes), 2)
         self.assertTrue(all(old.strip().startswith("CURRENT_PROJECT_VERSION = ") and
-                            new.strip() == "CURRENT_PROJECT_VERSION = 40185690362002;" for old, new in changes))
+                            new.strip() == "CURRENT_PROJECT_VERSION = 40185690362003;" for old, new in changes))
         self.assertEqual(updated.count("MARKETING_VERSION = 1.0;"), self.source.count("MARKETING_VERSION = 1.0;"))
+
+    def test_uploaded_build_one_prepares_build_two(self):
+        updated, message = updated_project(self.source, "1", "1.0")
+        self.assertEqual(updated.count("CURRENT_PROJECT_VERSION = 2;"), 2)
+        self.assertEqual(updated.count("CURRENT_PROJECT_VERSION = 1;"), 4)
+        self.assertIn("next build number: 2", message)
 
     def test_idempotence_and_no_downgrade_on_old_job_reruns(self):
         updated, _ = updated_project(self.source, "40185690362003", "1.0")
@@ -40,7 +46,8 @@ class BuildNumberWriteBack(unittest.TestCase):
 
     def test_rejects_invalid_outputs(self):
         for number, version in [("", "1.0"), ("1\nOTHER=2", "1.0"), ("-1", "1.0"),
-                                ("1.2", "1.0"), ("1" * 19, "1.0"), ("2", "1.0\nOTHER=2")]:
+                                ("1.2", "1.0"), ("1" * 19, "1.0"), ("9" * 18, "1.0"),
+                                ("2", "1.0\nOTHER=2")]:
             with self.subTest(number=number, version=version), self.assertRaises(ValueError):
                 updated_project(self.source, number, version)
 
@@ -48,7 +55,7 @@ class BuildNumberWriteBack(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory) / "project.pbxproj"
             project.write_text(self.source)
-            script = Path(__file__).with_name("record_build_number.py")
+            script = Path(__file__).with_name("prepare_next_build.py")
             result = subprocess.run([sys.executable, str(script), str(project), "40185690362002", "1.0"],
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
