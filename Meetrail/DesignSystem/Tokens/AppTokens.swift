@@ -24,6 +24,8 @@ enum AppLayout {
     static let timeColumn: CGFloat = 56
     static let cornerRadius: CGFloat = 8
     static let providerCardHeight: CGFloat = 80
+    static let providerIconSize: CGFloat = 24
+    static let providerIconColumn: CGFloat = 32
     static let onboardingWidth: CGFloat = 560
     static let onboardingWelcomeHeight: CGFloat = 320
     static let onboardingReadyHeight: CGFloat = 256

@@ -22,14 +22,17 @@ import SwiftUI
     private var startupFailure: Error?
     override init() {
         super.init()
+        StartupTrace.mark("delegate.begin")
         // Settings scene content is constructed before didFinishLaunching. Resolve
         // its injected ViewModel first, without creating windows or requesting access.
         do {
             let router = AppRouter(exporter: MarkdownExporter()); self.router = router
             container = try DependencyContainer.makeLive(actions: router, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
         } catch { startupFailure = error }
+        StartupTrace.mark("delegate.end")
     }
     func applicationDidFinishLaunching(_ notification: Notification) {
+        StartupTrace.mark("didFinishLaunching")
         NSApp.setActivationPolicy(.accessory)
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
@@ -65,24 +68,23 @@ import SwiftUI
 @MainActor final class AppWindowCoordinator: NSObject, NSWindowDelegate {
     private let container: DependencyContainer
     private var statusItem: NSStatusItem?
-    private let agendaPanel = AgendaPanel(contentRect: .zero, styleMask: [.borderless], backing: .buffered, defer: false)
+    private let agendaPopover = NSPopover()
     private var onboardingWindow: NSWindow?
     private var accountsWindow: NSWindow?
     private var floatingPanels: [NoteID: AgendaPanel] = [:]
-    private var outsideMonitor: Any?
     private var notificationTokens: [NSObjectProtocol] = []
     init(container: DependencyContainer) { self.container = container }
     func start() {
+        StartupTrace.mark("status.begin")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength); statusItem = item
         item.button?.image = NSImage(systemSymbolName: "note.text", accessibilityDescription: "Meetrail")
         item.button?.setAccessibilityLabel("Meetrail"); item.button?.toolTip = "Meetrail — Your meetings. Your notes. All connected."
         item.button?.target = self; item.button?.action = #selector(toggle)
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        agendaPanel.title = "Meetrail agenda"; agendaPanel.titleVisibility = .hidden; agendaPanel.titlebarAppearsTransparent = true
-        agendaPanel.standardWindowButton(.closeButton)?.isHidden = true
-        agendaPanel.isFloatingPanel = true; agendaPanel.becomesKeyOnlyIfNeeded = false
-        agendaPanel.level = .floating; agendaPanel.hidesOnDeactivate = true; agendaPanel.isReleasedWhenClosed = false
-        agendaPanel.collectionBehavior = [.transient, .moveToActiveSpace, .fullScreenAuxiliary]; agendaPanel.delegate = self
+        StartupTrace.mark("status.visible")
+        agendaPopover.behavior = .transient
+        agendaPopover.animates = false
+        agendaPopover.appearance = NSApp.appearance
         let visibleHeight = statusItem?.button?.window?.screen?.visibleFrame.height ?? 800
         var maximumHeight = visibleHeight - AppSpacing.sm
         #if DEBUG
@@ -91,18 +93,15 @@ import SwiftUI
         let host = NSHostingController(rootView: AgendaView(model: container.agenda!, maximumHeight: maximumHeight, onHeightChange: { [weak self] height in
             self?.resizeAgenda(height: height)
         }).modifier(ReviewLayoutModifier())); host.sizingOptions = []
-        agendaPanel.contentViewController = host
-        agendaPanel.backgroundColor = .windowBackgroundColor
-        agendaPanel.setContentSize(NSSize(width: AppLayout.panelWidth, height: AppLayout.emptyHeight))
-        outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            Task { @MainActor in self?.closeAgenda() }
-        }
-        for name in [NSApplication.didBecomeActiveNotification, .NSCalendarDayChanged, NSNotification.Name.NSSystemTimeZoneDidChange] {
+        agendaPopover.contentViewController = host
+        agendaPopover.contentSize = NSSize(width: AppLayout.panelWidth, height: AppLayout.emptyHeight)
+        for name in [NSNotification.Name.NSCalendarDayChanged, NSNotification.Name.NSSystemTimeZoneDidChange] {
             notificationTokens.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.container.coordinator.notifyChange() }
             })
         }
         DispatchQueue.main.async { [weak self] in
+            StartupTrace.mark("status.nextRunLoop")
             guard let self else { return }
             if self.container.onboarding.shouldAutomaticallyPresent { self.showOnboarding(); return }
             #if DEBUG
@@ -111,6 +110,12 @@ import SwiftUI
         }
     }
     @objc private func toggle() {
+        StartupTrace.mark("status.click")
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--startup-timing"), let event = NSApp.currentEvent {
+            NSLog("MEETRAIL_STARTUP inputQueueMs=%.3f", (ProcessInfo.processInfo.systemUptime - event.timestamp) * 1000)
+        }
+        #endif
         if let event = NSApp.currentEvent, event.type == .rightMouseUp, let button = statusItem?.button {
             closeAgenda()
             let menu = NSMenu()
@@ -118,7 +123,7 @@ import SwiftUI
             menu.addItem(.separator())
             let quit = menu.addItem(withTitle: "Quit Meetrail", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
             NSMenu.popUpContextMenu(menu, with: event, for: button)
-        } else if agendaPanel.isVisible { closeAgenda() } else { showAgenda() }
+        } else if agendaPopover.isShown { closeAgenda() } else { showAgenda() }
     }
     @objc private func showSettings() {
         closeAgenda(); NSApp.activate(ignoringOtherApps: true)
@@ -130,24 +135,24 @@ import SwiftUI
             }
         }
     }
-    func closeAgenda() { agendaPanel.orderOut(nil) }
+    func closeAgenda() { agendaPopover.performClose(nil) }
     func showAgenda() {
-        container.agenda.today(); resizeAgenda(height: agendaPanel.frame.height, anchorToStatus: true)
-        NSApp.activate(ignoringOtherApps: true); agendaPanel.makeKeyAndOrderFront(nil)
+        StartupTrace.mark("panel.begin")
+        guard let button = statusItem?.button else { return }
+        container.agenda.showToday()
+        NSApp.activate(ignoringOtherApps: true)
+        agendaPopover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if let window = agendaPopover.contentViewController?.view.window {
+            window.title = "Meetrail agenda"
+            window.makeKey()
+        }
+        StartupTrace.mark("panel.ordered")
+        DispatchQueue.main.async { StartupTrace.mark("panel.nextRunLoop") }
     }
-    private func resizeAgenda(height requestedHeight: CGFloat, anchorToStatus: Bool = false) {
+    private func resizeAgenda(height requestedHeight: CGFloat) {
         let visible = statusItem?.button?.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
         let height = min(max(1, requestedHeight), visible.height - AppSpacing.sm)
-        let width = AppLayout.panelWidth
-        var x = agendaPanel.frame.minX
-        var top = agendaPanel.frame.maxY
-        if anchorToStatus || agendaPanel.frame.isEmpty {
-            let button = statusItem?.button
-            let anchor = button?.window?.convertToScreen(button?.convert(button?.bounds ?? .zero, to: nil) ?? .zero) ?? visible
-            x = max(visible.minX + AppSpacing.xs, min(anchor.midX - width / 2, visible.maxX - width - AppSpacing.xs))
-            top = visible.maxY - AppSpacing.xs
-        }
-        agendaPanel.setFrame(NSRect(x: x, y: max(visible.minY, top - height), width: width, height: height), display: true)
+        agendaPopover.contentSize = NSSize(width: AppLayout.panelWidth, height: height)
     }
     func showAccounts() {
         closeAgenda(); container.accounts.refresh()
@@ -180,7 +185,8 @@ import SwiftUI
     private func makeWindow<V: View>(title: String, root: V) -> NSWindow {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         window.title = title; window.isReleasedWhenClosed = false; window.minSize = NSSize(width: 480, height: 360); window.delegate = self
-        let host = NSHostingController(rootView: root.modifier(ReviewLayoutModifier())); host.sizingOptions = []; window.contentViewController = host
+        let calendarArtwork = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal").map { Image(nsImage: NSWorkspace.shared.icon(forFile: $0.path)) }
+        let host = NSHostingController(rootView: root.environment(\.systemCalendarArtwork, calendarArtwork).modifier(ReviewLayoutModifier())); host.sizingOptions = []; window.contentViewController = host
         window.setContentSize(NSSize(width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight)); window.center(); return window
     }
     func showFloatingNote(_ id: NoteID) {
@@ -194,7 +200,6 @@ import SwiftUI
             panel.contentViewController = host; floatingPanels[id] = panel; NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil)
         } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
     }
-    func windowDidResignKey(_ notification: Notification) { if (notification.object as? NSWindow) === agendaPanel { closeAgenda() } }
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         if window === onboardingWindow { container.onboarding.windowClosed() }

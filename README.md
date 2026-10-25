@@ -8,7 +8,7 @@ Meetrail is a native, source-available macOS MVP. The core runs on macOS 15 or n
 
 ## Implemented
 
-- Custom content-sized 344-point SwiftUI day agenda in an AppKit status-item panel, chronological cards, previous/next day and Today controls. No month grid or native meeting dropdown.
+- Custom content-sized 344-point SwiftUI day agenda in a native AppKit status-item popover, chronological cards, previous/next day and Today controls. No month grid or native meeting dropdown.
 - Dedicated first-run onboarding with skip/resume, honest provider connection states, and searchable account-grouped calendar selection, including per-account selection controls.
 - EventKit calendar permission on explicit connection, stable selection across renames/revocation, change notifications, canceled/declined event filtering, all-day and recurring events from macOS calendar accounts.
 - Separate note and Join actions, recognized Google Meet, Zoom, Teams and Webex HTTPS links, destination-labelled fallback for other HTTPS links.
@@ -63,6 +63,8 @@ The dependency direction is Views → ViewModels → domain use cases → reposi
 
 Register future adapters through `CalendarAccountCoordinator` in the composition root. Provider-neutral calendar descriptors drive the same selection and onboarding screens; occurrence identities are namespaced outside the legacy system provider. No title-only cross-provider deduplication is performed. The lightweight architecture/design check enforces imports, feature adapter boundaries and token use; see [AGENTS.md](AGENTS.md). No third-party package dependencies are used.
 
+The EventKit adapter owns its store and event objects on a private serial actor and exposes cached, immutable catalog snapshots. `CalendarProvider.prepare()` completes catalog preparation before initial visibility is persisted; providers with an immediately available catalog use the default implementation. SwiftData contexts remain on their existing main actor. Opening today's popover reuses an in-flight or current agenda; EventKit, day and time-zone changes still refresh it.
+
 Production events are always read-only. The local series and note UUIDs are independent of EventKit IDs. Matching uses calendar + external event ID, plus the original occurrence date for recurring meetings. One-time meetings retain notes when moved; recurring moves retaining their original slot can preserve notes. Changed external IDs/calendars remain conservatively separate. Calendar cancellations never delete notes.
 
 Notes are stored in Meetrail's sandbox Application Support directory (the system SwiftData `default.store` and sidecars). Preserve the entire store together when backing up. There is no built-in cloud sync or custom encryption. Private drafts and revisions are never written into calendar events. See [SECURITY.md](SECURITY.md).
@@ -73,6 +75,6 @@ Notes are stored in Meetrail's sandbox Application Support directory (the system
 
 Copyright © 2026 Artemiy Kirillov. Licensed under the official [PolyForm Noncommercial License 1.0.0](LICENSE.md). Meetrail is source-available, not OSI-approved open source. Noncommercial use, study, modification and redistribution are permitted only under the license terms. Commercial use requires separate authorization from the copyright holder. The original author may separately distribute their own original application commercially, subject to third-party and contributor rights.
 
-Outside code is not automatically accepted. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). No MeetingBar source or assets are used. Apple SDKs/frameworks are used under Apple's applicable terms. There are no bundled third-party dependencies or additional notices to preserve.
+Outside code is not automatically accepted. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). No MeetingBar source or assets are used. Apple SDKs/frameworks are used under Apple's applicable terms. There are no third-party package dependencies. Provider artwork remains separately owned and is not covered by Meetrail's license; preserve the [artwork notices and source references](Meetrail/Resources/ProviderArtworkNotices.txt) and bundled Microsoft Fabric Assets license. Apple's installed Calendar icon is rendered locally and is not redistributed.
 
 App Store subtitle candidate: *Meetings and notes, connected*. Naming/trademark clearance and App Store review remain future release tasks.

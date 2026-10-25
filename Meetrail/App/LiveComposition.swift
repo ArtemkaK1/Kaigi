@@ -3,6 +3,8 @@ import UserNotifications
 
 extension DependencyContainer {
     static func makeLive(actions: any ApplicationActions, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
+        StartupTrace.mark("composition.begin")
+        defer { StartupTrace.mark("composition.end") }
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         let sample = arguments.contains("--sample")
@@ -16,8 +18,10 @@ extension DependencyContainer {
         if sample {
             let fixture = SampleCalendarGateway(empty: arguments.contains("--empty"), meetingCount: arguments.contains("--fifteen-meetings") ? 15 : arguments.contains("--one-meeting") ? 1 : 3, calendarCount: arguments.contains("--fifty-calendars") ? 50 : 1, longTitles: arguments.contains("--long-titles"))
             if firstRun && !arguments.contains("--connected") { fixture.access = .unknown }
+            if arguments.contains("--denied-calendar") { fixture.access = .denied }
             provider = fixture
         } else { provider = EventKitCalendarGateway() }
+        StartupTrace.mark("provider.created")
         let system: any PreferencesService = sample ? PreviewPreferencesService() : SystemPreferencesService(defaults: defaults, notifications: UNUserNotificationCenter.current())
         let ai: any AIRefinementService = arguments.contains("--mock-ai") && sample ? MockAIRefinementService(result: "Reviewed synthetic suggestion.") : AIServiceFactory.make()
         #else
@@ -27,7 +31,10 @@ extension DependencyContainer {
         let system: any PreferencesService = SystemPreferencesService(defaults: defaults, notifications: UNUserNotificationCenter.current())
         let ai: any AIRefinementService = AIServiceFactory.make()
         #endif
-        return try DependencyContainer(providers: [provider], store: NoteRepository(inMemory: sample), preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, closeOnboarding: closeOnboarding)
+        StartupTrace.mark("services.created")
+        let store = try NoteRepository(inMemory: sample)
+        StartupTrace.mark("notes.created")
+        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, closeOnboarding: closeOnboarding)
     }
 }
 #if DEBUG

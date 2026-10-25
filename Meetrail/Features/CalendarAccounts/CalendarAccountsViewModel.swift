@@ -54,6 +54,14 @@ struct ProviderCardState: Identifiable {
     var systemConnected: Bool { coordinator.state(for: .system) == .connected }
     var hasConnectedProvider: Bool { coordinator.connectionState == .connected }
     func refresh() {
+        readCatalog()
+        Task { [weak self] in
+            guard let self else { return }
+            await coordinator.prepare()
+            readCatalog()
+        }
+    }
+    private func readCatalog() {
         catalog = coordinator.catalog(); selectedIDs = visibility.selectedIDs
         providers = CalendarProviderKind.allCases.map { ProviderCardState(kind: $0, state: coordinator.state(for: $0)) }
     }

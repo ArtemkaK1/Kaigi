@@ -61,6 +61,8 @@ struct AgendaResult: Sendable { let meetings: [Meeting]; let recovered: [NoteRec
     let preferences: any PreferencesService
     let sample: Bool
     func load(day: DateInterval) async throws -> AgendaResult {
+        await coordinator.prepare()
+        try Task.checkCancellation()
         visibility.initializeIfNeeded()
         let events = try await coordinator.events(in: day, visibleCalendarIDs: visibility.effectiveIDs)
         if preferences.remindersEnabled && !sample {
@@ -73,7 +75,7 @@ struct AgendaResult: Sendable { let meetings: [Meeting]; let recovered: [NoteRec
         // reintroduce its live notes as apparently missing events.
         let catalog = coordinator.catalog()
         var recovered = try notes.recovered(in: day, excluding: Set(events.map(\.occurrenceKey)))
-        if !recovered.isEmpty && coordinator.connectionState == .connected {
+        if !recovered.isEmpty && coordinator.connectionState == .connected && Set(catalog.calendars.map(\.id)) != visibility.effectiveIDs {
             let allEvents = try await coordinator.events(in: day, visibleCalendarIDs: Set(catalog.calendars.map(\.id)))
             recovered = try notes.recovered(in: day, excluding: Set(allEvents.map(\.occurrenceKey)))
         }

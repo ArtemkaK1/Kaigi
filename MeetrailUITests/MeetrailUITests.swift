@@ -9,7 +9,7 @@ import AppKit
         app.launch()
         app.activate()
         // XCTest may activate its runner after launch; reopen only if that dismissed the panel.
-        if !extra.contains("--onboarding") && !app.buttons["Next day"].waitForExistence(timeout: 2) {
+        if !app.windows["Welcome to Meetrail"].exists && !app.buttons["Next day"].waitForExistence(timeout: 2) {
             app.statusItems.firstMatch.click()
             app.activate()
         }
@@ -32,6 +32,18 @@ import AppKit
         XCTAssertTrue(app.staticTexts["Saved locally"].exists)
         app.buttons["Float notes"].click()
         XCTAssertTrue(app.windows["Meetrail — Product conversation"].waitForExistence(timeout: 3))
+    }
+    func testFirstStatusClickAfterLaunch() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--sample", "--fifty-calendars", "--startup-timing"]
+        app.launch()
+        XCTAssertTrue(app.statusItems.firstMatch.waitForExistence(timeout: 8))
+        let began = ProcessInfo.processInfo.systemUptime
+        app.statusItems.firstMatch.click()
+        XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.popovers["Meetrail agenda"].exists)
+        print("MEETRAIL_FIRST_CLICK_UI seconds=\(ProcessInfo.processInfo.systemUptime - began)")
+        app.terminate()
     }
     func testKeyboardNavigationAndMeetingHistory() throws {
         let app = launch()
@@ -60,6 +72,7 @@ import AppKit
         XCTAssertFalse(empty.exists)
     }
     func testLightAndDarkAgenda() throws {
+        var materialBrightness: [String: CGFloat] = [:]
         for appearance in ["Aqua", "DarkAqua"] {
             let app = launch(["-NSAppearance", appearance])
             XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
@@ -77,12 +90,14 @@ import AppKit
             XCTAssertGreaterThan(accent.redComponent, accent.blueComponent + 0.2)
             let panel = app.descendants(matching: .any).matching(identifier: "Meetrail agenda").firstMatch
             let bitmap = try XCTUnwrap(NSBitmapImageRep(data: panel.screenshot().pngRepresentation))
-            let color = try XCTUnwrap(bitmap.colorAt(x: bitmap.pixelsWide - 2, y: bitmap.pixelsHigh - 2)?.usingColorSpace(.sRGB))
+            let color = try XCTUnwrap(bitmap.colorAt(x: bitmap.pixelsWide / 2, y: bitmap.pixelsHigh / 8)?.usingColorSpace(.sRGB))
             let brightness = (color.redComponent + color.greenComponent + color.blueComponent) / 3
+            materialBrightness[appearance] = brightness
             if appearance == "Aqua" { XCTAssertGreaterThan(brightness, 0.7) }
-            else { XCTAssertLessThan(brightness, 0.3) }
+            else { XCTAssertLessThan(brightness, 0.5, "Native dark material may show the desktop through vibrancy") }
             app.terminate()
         }
+        XCTAssertGreaterThan(try XCTUnwrap(materialBrightness["Aqua"]), try XCTUnwrap(materialBrightness["DarkAqua"]) + 0.3)
     }
     func testNativeSettingsSceneOpensAccountManagement() throws {
         let app = launch()
@@ -236,6 +251,15 @@ import AppKit
             attachment.name = "Synthetic provider alignment \(appearance) large=\(large)"; attachment.lifetime = .keepAlways; add(attachment)
             app.terminate()
         }
+        let denied = launch(["--onboarding", "--denied-calendar", "--large-text"])
+        denied.buttons["Continue"].click()
+        let title = denied.staticTexts["provider-name-system"]
+        let status = denied.staticTexts["provider-status-system"]
+        XCTAssertTrue(status.waitForExistence(timeout: 3))
+        XCTAssertEqual(status.value as? String, "Calendar access denied")
+        XCTAssertEqual(title.frame.minX, status.frame.minX, accuracy: 1)
+        XCTAssertTrue(denied.buttons["Open calendar privacy settings"].exists)
+        denied.terminate()
     }
     func testAIReviewErrorDoesNotOfferSaveRetryForSavedNotes() throws {
         let app = launch(["--mock-ai"])

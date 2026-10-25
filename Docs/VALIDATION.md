@@ -328,3 +328,92 @@ Both final builds passed with existing automatic signing. Architecture/token che
 | Enlarged Welcome | [Truncated](P12-before-large-welcome.jpg) | [Wrapping and scrolling](P12-large-welcome.jpg) |
 
 Additional synthetic captures: [disconnected/Coming Soon](P12-providers-disconnected.jpg), [enlarged connected providers](P12-providers-large.jpg), [stale AI review feedback](P12-ai-error.jpg), [empty agenda](P12-empty.jpg). All images contain synthetic data only. No branch, commit, push, installation or publication was performed.
+
+## P13 — native popup, provider artwork and startup (2026-10-24)
+
+**Implementation and regression: PASS.** The reported intermittent extended freeze was not reproduced on this MacBook; the measured synchronous EventKit work and redundant reads were corrected without claiming a conclusive diagnosis of an unobserved freeze.
+
+### Root causes and changes
+
+| Issue | Evidence and correction |
+| --- | --- |
+| Square popup | The agenda used a borderless NSPanel with an opaque window/root background. That configuration supplied no native popover chrome or corner clipping. Replaced only the agenda presentation with an NSPopover, retaining its custom SwiftUI content and content-measured height. AppKit supplies material, clipping, corners, shadow, menu-bar anchoring, outside-click/deactivation and Escape dismissal. Removed the opaque agenda root fill, manual screen positioning, global mouse monitor and obsolete panel configuration/resign-key handling. No hidden titlebar or decorative replacement rectangle. Floating notes retain their existing titled panel. |
+| Generic provider glyphs | All future providers previously shared the calendar SF Symbol. Added original-color artwork from official vendor hosts for Google, Outlook, Yandex and Zoho. Apple/System renders the installed Calendar icon through public NSWorkspace APIs, without redistributing Apple artwork. CalDAV and missing assets use neutral SF Symbols. Shared geometry tokens provide 24-point artwork in a 32-point column, scaling with text; connection indicators remain separate and centered beneath the provider image. |
+| Blocking startup/read path | Baseline authorization/catalog/event work ran on MainActor; an async entry point alone did not move the synchronous EventKit calls. Initial recovery repeated an identical all-visible-calendar query, and reopening/activation could refresh again. A private serial actor now owns EKEventStore and its event objects. Only Sendable value snapshots cross to the MainActor adapter. Coalesced catalog preparation precedes initial visibility persistence; permission checks also run on the worker. Reopening Today reuses the existing/in-flight agenda, identical recovery queries are omitted, and activation refreshes only changed permission state. Calendar/day/time-zone notifications continue refreshing data. SwiftData initialization measured 7–9 ms and stays on its original actor/context. No schema/store reset or calendar-writing API. |
+
+The existing provider/coordinator/repository architecture remains intact. The provider protocol has one readiness hook, `prepare()`, with an immediate default for already-prepared providers. Calendar management updates its presentation snapshot after preparation; it does not query EventKit directly. Pure normalization/link-resolution/value operations gained explicit nonisolated annotations so they can safely run on the reader actor; their algorithms and occurrence keys are unchanged. A debug-only denied-calendar fixture supports UI verification without changing real system permissions. No new application features, external providers, dependencies or AI behavior.
+
+### Measured startup
+
+Opt-in Debug monotonic timing (`--startup-timing`) was added before changing behavior. Measurements used the existing local store and system calendar configuration (nine selected calendars across multiple sources). “Cold” here means the first process launch of the instrumented build; no reboot, disk-cache purge or calendar-daemon reset was performed. In-process timing starts at AppDelegate initialization, so it excludes process creation/dyld and is not a statistical benchmark. Worker read timings include actual EventKit work, not a fake provider.
+
+| Metric | Before | Final |
+| --- | ---: | ---: |
+| First process launch: delegate → status item | 116.26 ms | 85.83 ms |
+| Warm relaunch: delegate → status item | 101.80 ms | 101.67 ms |
+| First launch: status item → next main-loop turn | 53.56 ms | 7.46 ms |
+| Warm launch: status item → next main-loop turn | 44.22 ms | 8.43 ms |
+| SwiftData open, first / warm | 7.59 / 7.10 ms | 9.02 / 8.31 ms |
+| First-click GUI check, live store/calendars | 2.05 s | 1.81 s |
+| Initial event queries, all calendars visible with recovered notes | 2 | 1 |
+| EventKit authorization/catalog/event reads | Main thread | Background actor (`main=0`) |
+
+The next-loop measurement is a responsiveness proxy, not a claimed input latency. First-click timing includes XCTest event synthesis, snapshots and waiting overhead; it is not the app handler's duration. The real-store first-click checks launched normally without preopening the popup. Final authorization, catalog and event reads took approximately 18–20, 23–24 and 10–11 ms respectively on the background actor, after the status item was available. Native popover first presentation adds normal system-window setup (an earlier measured first show was 78 ms versus 13 ms for the former borderless window); no artificial startup delay or later status-item creation was introduced.
+
+Numeric logs remain outside Git: `/tmp/meetrail-p13-before-cold.log`, `/tmp/meetrail-p13-before-warm.log`, `/tmp/meetrail-p13-after-cold-final.log`, `/tmp/meetrail-p13-after-warm-final.log`, `/tmp/meetrail-p13-baseline-click.log`, `/tmp/meetrail-p13-live-first-click-final.log`. The trace records fixed stage names, uptime and thread flags, never calendar identifiers, meeting titles or note content. The deterministic preparation test uses a controlled continuation, not a timed production delay, to demonstrate that the loading state and synchronous presentation intentions remain available before calendars finish. Local live reads finished too quickly to capture a meaningful loading-state screenshot.
+
+### Actual MacBook checks and test results
+
+- Inspected native popup corners/material/arrow/compact bounds in light and dark appearance. No titlebar gap or square root background. Existing one/15-meeting, long-title, constrained-height, keyboard, left-click, Escape and right-click Settings/Quit GUI checks passed. The full popover includes native chrome around its unchanged 344-point content and remains below the practical 380-point width target.
+- Inspected original-color provider artwork in disconnected, connected, Coming Soon and synthetic denied states, including enlarged dark text. Long titles/statuses wrap, checkmarks remain in the icon column and native scrolling exposes overflow. Fifty-calendar selection and onboarding progression/relaunch passed existing tests. Icons are decorative in the accessibility tree; names/statuses remain readable.
+- In the final signed Release app, existing recovered meeting cards appeared after QA cleanup. Opened an existing nonempty note: editor, Saved locally and Meeting history remained available. Returned with Command-[ without editing its text. No real notes were entered or exported during P13.
+- Actual Join from the synthetic agenda opened the expected invalid-code Google Meet page in Safari; no conference was entered. Closed only the workflow tab. Link validation/provider recognition and independent card/Join intentions also passed existing tests.
+- Real attendee-free fixtures were created in the dedicated Meetrail QA calendar solely through the separate harness. The production reader test passed its existing all-day/overlap/provider/recurrence/moved-exception/note-association assertions through the actor-backed adapter. Cleanup removed only manifest-listed fixtures, retained the calendar and removed the manifest. Completed QA utility processes were closed. No attendees/invitations or existing personal/work events were modified. The original Russian input source was restored after ABC XCTest typing.
+
+**Final complete suite: 57 reported test cases passed, 0 failures, 0 skips** (42 Swift Testing methods, one real EventKit integration and 14 GUI tests). With the three parameterized methods expanded, this is **69 executions**: 54 deterministic/parameterized unit executions, one real integration and 14 GUI executions. Existing real on-device Clean Up and Structure/unsupported-language probes passed; mock UI AI checks remain separate. Result bundle: `/tmp/MeetrailP13/Logs/Test/Test-Meetrail-2026.10.24_15-10-34-+0200.xcresult`; log: `/tmp/meetrail-p13-final-tests.log`.
+
+Additional verification after extending only the Debug fixture/test matrix: the provider-state GUI check passed with denied access at enlarged text (`/tmp/MeetrailP13/Logs/Test/Test-Meetrail-2026.10.24_15-15-52-+0200.xcresult`, `/tmp/meetrail-p13-provider-states.log`). The final live-store first-click probe passed separately (`/tmp/MeetrailP13/Logs/Test/Test-Meetrail-2026.10.24_15-18-09-+0200.xcresult`, `/tmp/meetrail-p13-live-first-click-final.log`); the retained automated test uses synthetic data by default.
+
+The first regression attempt exposed a new test's shared preference fixture, Russian Latin-input synthesis, a screenshot sample in native chrome, and a relaunch helper assuming an onboarding argument always meant a visible onboarding window. Corrected fixture isolation and native presentation assumptions. Appearance testing now samples interior material and checks a substantial light/dark difference while allowing native vibrancy; all other functional assertions remain. No unrelated test was removed, weakened or converted into a skip. Temporary external-process timing probes could not attach through XCTest's application-state lookup; they were removed after recording the ordinary-launch comparison above, rather than presented as successful measurements.
+
+Both final standalone builds passed with existing automatic signing:
+
+```sh
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP13 build
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Release \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP13Release build
+Tools/run-calendar-qa.sh
+xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
+  -destination 'platform=macOS' -derivedDataPath /tmp/MeetrailP13 \
+  -parallel-testing-enabled NO test
+python3 Tools/verify-architecture.py
+git diff --check
+Tools/run-calendar-qa.sh --cleanup
+```
+
+Build logs: `/tmp/meetrail-p13-debug.log`, `/tmp/meetrail-p13-release.log`. Architecture/token guard and `git diff --check` pass. The signed Release app is running from `/tmp/MeetrailP13Release/Build/Products/Release/Meetrail.app`. The Release build retains the unrelated AppIntents metadata warning. XCTest also records the previously seen internal QoS/priority-inversion warning in a synthetic AI UI check; no visible hang or failing assertion accompanied it, and it was not localized to production startup. Full spoken VoiceOver, other physical displays, fullscreen/Space variations, macOS 15 execution and cold-boot/long-duration profiling remain manual checks. The unobserved intermittent freeze cannot be declared conclusively reproduced or eliminated from these samples.
+
+### Artwork provenance, files and captures
+
+The owner explicitly confirmed permission to use the requested Google/Yandex/Zoho icons. Original sources, SHA-256 values, ownership, reviewed brand rules and downstream rights limitations are recorded in [ProviderArtworkNotices.txt](../Meetrail/Resources/ProviderArtworkNotices.txt), bundled with the complete unmodified [Microsoft Fabric Assets license](../Meetrail/Resources/Microsoft-Fabric-Assets-License.pdf). No claim is made that vendor trademarks/artwork are relicensed under PolyForm. Google/Outlook SVG/PNG came from vendor CDNs; Yandex and Zoho 48-pixel icons came from their official Calendar favicons and were decoded to PNG without redrawing. Apple artwork is loaded from the installed app, not committed. Neither the Dock icon nor status-item icon was changed. LICENSE.md, note schema/default location and production calendar-read-only behavior remain unchanged.
+
+Modified source files:
+
+- `Meetrail/App/StatusController.swift`, `Meetrail/App/LiveComposition.swift`.
+- `Meetrail/Data/Calendar/EventKit/CalendarGateway.swift`.
+- `Meetrail/DesignSystem/Tokens/AppTokens.swift`.
+- `Meetrail/Domain/Models/CalendarModels.swift`, `Meetrail/Domain/Models/Meeting.swift` (isolation annotations only).
+- `Meetrail/Domain/Protocols/Repositories.swift`, `Meetrail/Domain/UseCases/CalendarAccountCoordinator.swift`, `Meetrail/Domain/UseCases/NoteUseCases.swift` (preparation and redundant-query removal).
+- `Meetrail/Domain/UseCases/EventNormalizer.swift`, `Meetrail/Domain/UseCases/MeetingLinkResolver.swift` (pure nonisolated annotations only).
+- `Meetrail/Features/Agenda/AgendaView.swift`, `Meetrail/Features/Agenda/AgendaViewModel.swift`, `Meetrail/Features/CalendarAccounts/CalendarAccountsView.swift`, `Meetrail/Features/CalendarAccounts/CalendarAccountsViewModel.swift`.
+- `MeetrailTests/CalendarIntegrationTests.swift`, `MeetrailUITests/MeetrailUITests.swift`, `README.md`, `Docs/QA.md`, `Docs/VALIDATION.md`.
+
+Added: `Meetrail/DesignSystem/Components/ProviderIcon.swift`, `Meetrail/Infrastructure/StartupTrace.swift`, `MeetrailTests/StartupPerformanceTests.swift`, four `ProviderGoogle/ProviderMicrosoft/ProviderYandex/ProviderZoho.imageset` directories (each Contents.json + original-color icon), the two artwork notice/license resources, and the six synthetic captures below. No pre-existing files were deleted. Obsolete borderless agenda setup, manual anchoring/global event monitor/resign-key code were removed; the original floating-note panel remains. The Xcode project's automatic-signing key reordering was restored without changing build settings. No branch, commit, push, release, installation or visibility change.
+
+| Synthetic screen | Capture |
+| --- | --- |
+| Native popup, light / dark | [Light](P13-popup-light.jpg), [dark](P13-popup-dark.jpg) |
+| Connected providers, light / dark | [Light](P13-providers-light.jpg), [dark](P13-providers-dark.jpg) |
+| Disconnected and Coming Soon | [Capture](P13-providers-disconnected.jpg) |
+| Denied access, enlarged dark text | [Capture](P13-providers-denied-large.jpg) |

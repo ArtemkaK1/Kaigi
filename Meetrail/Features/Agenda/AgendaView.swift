@@ -23,7 +23,7 @@ struct AgendaView: View {
             }
         }
         .frame(width: AppLayout.panelWidth).fixedSize(horizontal: false, vertical: true)
-        .background(AppColors.background).foregroundStyle(AppColors.primary).tint(AppColors.accent)
+        .foregroundStyle(AppColors.primary).tint(AppColors.accent)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onHeightChange($0) }
     }
     private var header: some View {

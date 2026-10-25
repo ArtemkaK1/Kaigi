@@ -12,6 +12,7 @@ import Foundation
         let token = UUID(); observers[token] = action; return token
     }
     func removeObserver(_ token: UUID) { observers.removeValue(forKey: token) }
+    func prepare() async { for provider in providers { await provider.prepare() } }
     func notifyChange() { for action in Array(observers.values) { action() } }
     func state(for kind: CalendarProviderKind) -> AccountConnectionState {
         providers.first { $0.kind == kind }?.connectionState ?? .comingSoon

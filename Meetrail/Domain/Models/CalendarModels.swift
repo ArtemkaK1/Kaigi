@@ -1,6 +1,6 @@
 import Foundation
 
-struct CalendarID: RawRepresentable, Codable, Hashable, Sendable, Identifiable {
+nonisolated struct CalendarID: RawRepresentable, Codable, Hashable, Sendable, Identifiable {
     let rawValue: String
     var id: String { rawValue }
     init(rawValue: String) { self.rawValue = rawValue }
@@ -37,7 +37,7 @@ struct CalendarColor: Hashable, Sendable {
     let red: Double
     let green: Double
     let blue: Double
-    static let neutral = CalendarColor(red: 0.5, green: 0.5, blue: 0.5)
+    nonisolated static let neutral = CalendarColor(red: 0.5, green: 0.5, blue: 0.5)
 }
 struct CalendarDescriptor: Identifiable, Hashable, Sendable {
     let id: CalendarID
@@ -46,7 +46,7 @@ struct CalendarDescriptor: Identifiable, Hashable, Sendable {
     let color: CalendarColor
     let isAvailable: Bool
 }
-struct CalendarCatalog: Sendable {
+nonisolated struct CalendarCatalog: Sendable {
     let accounts: [CalendarAccount]
     let calendars: [CalendarDescriptor]
     static let empty = CalendarCatalog(accounts: [], calendars: [])

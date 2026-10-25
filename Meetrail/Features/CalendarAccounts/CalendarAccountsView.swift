@@ -18,6 +18,8 @@ struct CalendarAccountsView: View {
 }
 struct ProviderConnectionsView: View {
     @Bindable var model: CalendarAccountsViewModel
+    @Environment(\.dynamicTypeSize) private var textSize
+    private var iconColumn: CGFloat { AppLayout.providerIconColumn * AppTypography.scale(for: textSize) }
     private let columns = [GridItem(.flexible(), spacing: AppSpacing.xs, alignment: .top), GridItem(.flexible(), spacing: AppSpacing.xs, alignment: .top)]
     var body: some View {
         ScrollView {
@@ -27,15 +29,14 @@ struct ProviderConnectionsView: View {
                     ForEach(model.providers) { card in
                         Grid(alignment: .topLeading, horizontalSpacing: AppSpacing.xs, verticalSpacing: AppSpacing.xs) {
                             GridRow {
-                                Image(systemName: card.kind == .system ? "desktopcomputer" : "calendar")
-                                    .frame(width: AppButtonSize.icon.width).accessibilityHidden(true)
+                                ProviderIcon(kind: card.kind).frame(width: iconColumn)
                                 Text(card.kind.title).appText(.body, weight: .semibold)
                                     .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                                     .accessibilityIdentifier("provider-name-\(card.kind.rawValue)")
                             }.accessibilityElement(children: .contain)
                             GridRow {
                                 Image(systemName: "checkmark.circle").appText(.caption).foregroundStyle(AppColors.secondary)
-                                    .frame(width: AppButtonSize.icon.width).opacity(card.state == .connected ? 1 : 0).accessibilityHidden(true)
+                                    .frame(width: iconColumn).opacity(card.state == .connected ? 1 : 0).accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                                     Text(card.statusDescription).appText(.caption).foregroundStyle(AppColors.secondary)
                                         .fixedSize(horizontal: false, vertical: true)

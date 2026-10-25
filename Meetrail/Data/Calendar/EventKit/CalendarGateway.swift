@@ -2,13 +2,13 @@ import Foundation
 import EventKit
 import AppKit
 
-enum CalendarAccess: Equatable { case unknown, allowed, denied }
+nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, denied }
 @MainActor protocol CalendarGateway: AnyObject {
     var access: CalendarAccess { get }
     var calendars: [CalendarChoice] { get }
     var onChange: (() -> Void)? { get set }
     func requestAccess() async throws
-    func meetings(in interval: DateInterval, calendarIDs: Set<String>) throws -> [Meeting]
+    func meetings(in interval: DateInterval, calendarIDs: Set<String>) async throws -> [Meeting]
 }
 
 @MainActor final class SampleCalendarGateway: CalendarGateway, CalendarProvider {
@@ -52,30 +52,24 @@ enum CalendarAccess: Equatable { case unknown, allowed, denied }
 }
 
 // This production gateway deliberately has no save/remove/create methods.
-@MainActor final class EventKitCalendarGateway: CalendarGateway {
-    private let store = EKEventStore()
-    private var observer: NSObjectProtocol?
-    var onChange: (() -> Void)?
+// The worker owns EventKit objects; only immutable domain snapshots cross actors.
+private actor EventKitReader {
+    private lazy var store = EKEventStore()
     var access: CalendarAccess {
+        StartupTrace.mark("authorization.begin")
+        defer { StartupTrace.mark("authorization.end") }
         switch EKEventStore.authorizationStatus(for: .event) {
-        case .fullAccess: .allowed
-        case .notDetermined: .unknown
-        default: .denied
+        case .fullAccess: return .allowed
+        case .notDetermined: return .unknown
+        default: return .denied
         }
     }
-    var calendars: [CalendarChoice] {
-        guard access == .allowed else { return [] }
-        return store.calendars(for: .event).map { CalendarChoice(id: $0.calendarIdentifier, title: $0.title) }
-    }
-    init() {
-        observer = NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: store, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.onChange?() }
-        }
-    }
-    deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
+    func snapshot() -> (CalendarAccess, CalendarCatalog) { (access, catalog()) }
     func requestAccess() async throws { _ = try await store.requestFullAccessToEvents() }
     func meetings(in interval: DateInterval, calendarIDs: Set<String>) throws -> [Meeting] {
-        guard access == .allowed else { return [] }
+        StartupTrace.mark("events.begin")
+        defer { StartupTrace.mark("events.end") }
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return [] }
         let selected = store.calendars(for: .event).filter { calendarIDs.contains($0.calendarIdentifier) }
         guard !selected.isEmpty else { return [] }
         let predicate = store.predicateForEvents(withStart: interval.start, end: interval.end, calendars: selected)
@@ -92,17 +86,10 @@ enum CalendarAccess: Equatable { case unknown, allowed, denied }
             return EventNormalizer().normalize(meeting, canceled: event.status == .canceled, declined: (event.attendees ?? []).contains { $0.isCurrentUser && $0.participantStatus == .declined }, interval: interval)
         }
     }
-}
-
-// Adapter implementation shares the existing read-only EventKit gateway.
-extension EventKitCalendarGateway: CalendarProvider {
-    var kind: CalendarProviderKind { .system }
-    var connectionState: AccountConnectionState {
-        switch access { case .allowed: .connected; case .denied: .permissionDenied; case .unknown: .notConnected }
-    }
-    func connect() async throws { try await requestAccess() }
     func catalog() -> CalendarCatalog {
-        guard access == .allowed else { return .empty }
+        StartupTrace.mark("catalog.begin")
+        defer { StartupTrace.mark("catalog.end") }
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return .empty }
         let calendars = store.calendars(for: .event)
         var sources: [String: CalendarAccount] = [:]
         let descriptors = calendars.map { calendar in
@@ -116,7 +103,68 @@ extension EventKitCalendarGateway: CalendarProvider {
         return CalendarCatalog(accounts: sources.values.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending },
                                calendars: descriptors.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending })
     }
+}
+
+@MainActor final class EventKitCalendarGateway: CalendarGateway, CalendarProvider {
+    private let reader = EventKitReader()
+    private var observers: [NSObjectProtocol] = []
+    private var cachedCatalog = CalendarCatalog.empty
+    private var catalogTask: Task<(CalendarAccess, CalendarCatalog), Never>?
+    private var catalogGeneration = 0
+    private var prepared = false
+    private var cachedAccess = CalendarAccess.unknown
+    var onChange: (() -> Void)?
+    var kind: CalendarProviderKind { .system }
+    var access: CalendarAccess { cachedAccess }
+    var calendars: [CalendarChoice] { cachedCatalog.calendars.map { CalendarChoice(id: $0.id.rawValue, title: $0.name) } }
+    var connectionState: AccountConnectionState {
+        switch access { case .allowed: .connected; case .denied: .permissionDenied; case .unknown: .notConnected }
+    }
+    init() {
+        StartupTrace.mark("eventkit.created")
+        observers.append(NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.invalidate() }
+        })
+        observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.prepared else { return }
+                let access = await self.reader.access
+                guard access != self.cachedAccess else { return }
+                self.invalidate()
+            }
+        })
+    }
+    deinit { for observer in observers { NotificationCenter.default.removeObserver(observer) } }
+    func prepare() async {
+        while !prepared {
+            let generation = catalogGeneration
+            if catalogTask == nil { catalogTask = Task { await reader.snapshot() } }
+            let value = await catalogTask!.value
+            guard generation == catalogGeneration else { continue }
+            cachedAccess = value.0; cachedCatalog = value.1; prepared = true; catalogTask = nil
+        }
+    }
+    private func invalidate() {
+        catalogGeneration += 1; prepared = false; catalogTask = nil
+        let generation = catalogGeneration
+        Task {
+            await prepare()
+            guard generation == catalogGeneration else { return }
+            onChange?()
+        }
+    }
+    func requestAccess() async throws {
+        try await reader.requestAccess()
+        catalogGeneration += 1; prepared = false; catalogTask = nil
+        await prepare()
+    }
+    func connect() async throws { try await requestAccess() }
+    func catalog() -> CalendarCatalog { access == .allowed ? cachedCatalog : .empty }
+    func meetings(in interval: DateInterval, calendarIDs: Set<String>) async throws -> [Meeting] {
+        await prepare(); try Task.checkCancellation()
+        return try await reader.meetings(in: interval, calendarIDs: calendarIDs)
+    }
     func events(in interval: DateInterval, visibleCalendarIDs: Set<CalendarID>) async throws -> [CalendarEvent] {
-        try meetings(in: interval, calendarIDs: Set(visibleCalendarIDs.map(\.rawValue)))
+        try await meetings(in: interval, calendarIDs: Set(visibleCalendarIDs.map(\.rawValue)))
     }
 }

@@ -38,6 +38,11 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
     }
     func move(_ days: Int) { day.move(days); refresh() }
     func today() { day.date = .now; refresh() }
+    func showToday() {
+        // EventKit changes already refresh today's agenda. Opening the panel must
+        // not cancel an in-flight initial load or repeat the same calendar reads.
+        if !day.calendar.isDateInToday(day.date) { today() }
+    }
     func refresh() {
         loadTask?.cancel()
         loadTask = Task { [weak self] in await self?.load() }

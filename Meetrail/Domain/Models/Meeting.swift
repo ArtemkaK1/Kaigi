@@ -18,7 +18,7 @@ struct Meeting: Identifiable, Hashable, Sendable {
     // Never match across calendars or by a title/time similarity heuristic.
     var seriesKey: String { MeetingAssociation.seriesKey(calendarID: calendarID, externalID: externalID, provider: providerKind, accountID: accountID) }
     var occurrenceKey: String { MeetingAssociation.occurrenceKey(seriesKey: seriesKey, recurring: recurring, originalStart: originalStart) }
-    func overlaps(_ interval: DateInterval) -> Bool { start < interval.end && end > interval.start }
+    nonisolated func overlaps(_ interval: DateInterval) -> Bool { start < interval.end && end > interval.start }
 }
 
 struct CalendarChoice: Identifiable, Sendable {

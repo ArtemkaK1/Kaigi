@@ -22,9 +22,14 @@ import Foundation
     var kind: CalendarProviderKind { get }
     var connectionState: AccountConnectionState { get }
     var onChange: (() -> Void)? { get set }
+    func prepare() async
     func catalog() -> CalendarCatalog
     func connect() async throws
     func events(in interval: DateInterval, visibleCalendarIDs: Set<CalendarID>) async throws -> [CalendarEvent]
+}
+extension CalendarProvider {
+    // Providers with an immediately available catalog need no preparation.
+    func prepare() async {}
 }
 @MainActor protocol PreferencesService: AnyObject {
     var aiEnabled: Bool { get set }

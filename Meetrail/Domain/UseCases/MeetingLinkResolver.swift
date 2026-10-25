@@ -1,6 +1,6 @@
 import Foundation
 
-struct MeetingLinkResolver {
+nonisolated struct MeetingLinkResolver {
     static func validated(_ url: URL) -> URL? {
         guard url.scheme?.lowercased() == "https", let host = url.host?.lowercased(), host.contains("."),
               url.user == nil, url.password == nil, url.port == nil || url.port == 443,
