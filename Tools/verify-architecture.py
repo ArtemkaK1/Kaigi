@@ -2,8 +2,10 @@
 """Repository-local MVVM and design-token guard. No third-party dependencies."""
 from pathlib import Path
 import re, sys
-root = Path(__file__).resolve().parents[1] / 'Meetrail'
+root = Path(__file__).resolve().parents[1] / 'Kaigi'
 violations = []
+if not root.is_dir():
+    sys.exit('FAIL: Kaigi source root is missing')
 for path in root.rglob('*.swift'):
     text = path.read_text()
     code = re.sub(r'//[^\n]*', '', text)

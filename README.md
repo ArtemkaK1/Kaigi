@@ -1,104 +1,85 @@
-# Meetrail
+# Kaigi
 
 **Your meetings. Your notes. All connected.**
 
-A privacy-first macOS menu bar app for meetings, personal notes, and recurring meeting context. Powered by on-device AI.
-
-Meetrail is a native, source-available macOS MVP. The core runs on macOS 15 or newer; optional AI requires macOS 26 or newer, supported Apple Intelligence hardware/language, Apple Intelligence enabled, and a ready model. Xcode 27 was used for development. The minimum deployment target compiles against macOS 15 APIs; execution on macOS 15 still needs a separate machine.
-
-## Implemented
-
-- Custom content-sized 344-point SwiftUI day agenda in a native AppKit status-item popover, chronological cards, previous/next day and Today controls. No month grid or native meeting dropdown.
-- Dedicated first-run onboarding with skip/resume, honest provider connection states, and searchable account-grouped calendar selection, including per-account selection controls.
-- EventKit calendar permission on explicit connection, stable selection across renames/revocation, change notifications, canceled/declined event filtering, all-day and recurring events from macOS calendar accounts.
-- Separate note and Join actions, recognized Google Meet, Zoom, Teams and Webex HTTPS links, destination-labelled fallback for other HTTPS links.
-- Local SwiftData occurrence notes, immediate autosave, revision restoration, Markdown export, meeting-based recovery after calendar disappearance, and floating notes panels.
-- A resizable, meeting-scoped History & Context window with earlier notes, explicitly confirmed recurring context, reviewed carryover and a per-series display preference.
-- On-device Clean Up and guided Structure, availability/language checks, preview before apply, original revisions, and deterministic injectable AI mocks. Structure rejects excerpts absent from the original input.
-- Optional private local reminders five minutes before meetings and launch-at-login controls.
-
-The P11 local signed suite passed 64 executions with no failures or skips, including real EventKit and eleven GUI tests. Real on-device Clean Up/Structure and own-account Google Meet entry were verified on the development Mac. Implementation is not a claim that every device-level scenario has passed.
+Kaigi (会議, “meeting”) is a native macOS menu bar app for meetings, private occurrence notes and recurring meeting context. It uses local SwiftData storage and optional on-device AI. The core supports macOS 15 or newer; AI requires macOS 26 or newer, supported Apple Intelligence hardware/language, Apple Intelligence enabled and a ready model. Full test/Release validation uses Xcode 27; Xcode 26.4.1 also passed a signed Debug build and clean GUI opening. The property-list project keeps Xcode 16.0 format compatibility. Use Xcode 26.4.1 for editing if this Xcode 27 installation displays its `project.xcproj` lock issue; see the validation report. macOS 15 runtime needs separate validation.
 
 ## Build and run
 
-Build and publish manually in Xcode. The app identity is `com.volrik.meetrail.app`, team `WX557M9HD2`, version `1.0`, build `1`. No CI build, automatic upload or build-number update is configured.
+Open `Kaigi.xcodeproj`, select the **Kaigi** shared scheme and **My Mac**, then build/run. The existing project was renamed in place; it retains Debug/Release, unit/UI targets, capabilities and automatic signing.
 
-Open `Meetrail.xcodeproj`, select the Meetrail scheme and My Mac, and build/run. The automatic-signing configuration uses Team `WX557M9HD2` and Bundle ID `com.volrik.meetrail.app`; supply an authorized development certificate/private key for that team, or choose your own team and bundle ID for your local build.
+- Installed name, executable and product: **Kaigi**.
+- Registered bundle ID: **`com.volrik.kaigi`**, verified in Apple Developer and the existing macOS App Store Connect record on 28 October 2026.
+- Team: **`WX557M9HD2`**; Automatic signing. Version **1.0**, build **1**, unchanged.
+- App Store Connect listing: **Kaigi - Meeting Notes** (Apple ID **6828158632**); preserve this exact owner-selected name.
+- Swift module: **`Meetrail`**, deliberately retained to preserve SwiftData model runtime identity. Test imports retain this name; project and test products use Kaigi.
 
 ```sh
-xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug build
-xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -destination 'platform=macOS' \
+xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -configuration Debug build
+xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -configuration Release build
+xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -destination 'platform=macOS' \
   -parallel-testing-enabled NO test
 python3 Tools/verify-architecture.py
+python3 Tools/test-transfer-data.py
+git diff --check
 ```
 
-On a Mac without that development certificate, local debugging can use ad-hoc signing while retaining App Sandbox:
+Use the existing development certificate/private key. A restricted shell may not see keychain identities: verify with authorized keychain access or an actual signed Xcode attempt before diagnosing a missing identity. Never generate/revoke certificates to work around a test limitation. No CI, Fastlane, automatic version update, archive upload or TestFlight upload is configured or performed.
+
+Debug-only `--sample --show-agenda` uses synthetic calendars and in-memory notes without requesting calendar access. `--context-history` seeds earlier synthetic notes/context; `--mock-ai` enables explicitly synthetic AI previews. Add `-NSAppearance Aqua` or `-NSAppearance DarkAqua` for appearance review. `--onboarding --fifty-calendars`, `--empty`, `--one-meeting`, `--fifteen-meetings`, `--long-titles`, `--large-text` and `--constrained-height` exercise layout. `--test-session ID` retains only synthetic preferences across launches. Debug-only `--sample --live-system-services` keeps calendars/notes synthetic while using the real notification and login adapters; ordinary sample mode continues to use preview services. UI tests need an interactive automation session and an ABC keyboard input source for Latin text entry. Prepare the real calendar fixtures with `Tools/run-calendar-qa.sh` before the live integration test and clean them afterward with `Tools/run-calendar-qa.sh --cleanup`; only tracked attendee-free workflow events are removed.
+
+## Use and capabilities
+
+The single-day, content-sized 344-point agenda has a bounded scroll viewport, separate note and Join actions, destination-labeled conference links and keyboard navigation (Command-left/right, Command-T, Command-[, Command-comma). Right-click the template menu-bar symbol for Settings and Quit Kaigi. Notes belong to meeting occurrences; there is no standalone notes browser.
+
+Editors autosave locally, support revision restoration and user-selected Markdown export, and share state with floating notes. The resizable History & Context window shows earlier occurrences, manually confirmed recurring context and explicit carryover. No task owner, deadline or completion is inferred. Notes from missing calendar events remain recoverable as occurrence cards on their original agenda day. Changed event/calendar identities are kept conservatively separate.
+
+Clean Up and Structure use Apple Foundation Models on supported devices. Proposed changes require review and Apply; originals are retained as revisions. Unsupported languages or model/device readiness surface an honest unavailable/error state. Direct provider connections and external AI services are not implemented. Synthetic AI is a test fixture, never a live provider claim.
+
+Only Apple / System Calendars connects today. Existing Google/Microsoft/CalDAV accounts already synchronized through macOS work via EventKit. Calendar permission is requested only by an explicit Connect action. Production adapters remain read-only. Other direct providers are labeled Coming Soon.
+
+Optional local reminders omit private meeting titles/notes and require separate notification consent. Launch at login uses `SMAppService.mainApp` and depends on the installed app location and macOS approval. Calendar permission, notification authorization, login registration, real AI readiness and external conference entry are device/account-dependent; synthetic UI tests do not validate those services.
+
+## Rebranding and data
+
+**The old installed app and its store are not migrated or removed automatically.** The new bundle ID has a separate sandbox, defaults domain, permission identity and login registration. Read [the data transfer procedure](Docs/DataMigration.md) before switching. It includes a verified owner-run offline helper, intact backups, a refusal to overwrite existing files, and explicit rollback instructions. Markdown alone is not a full revision/history backup.
+
+`MeetingSeries`, `MeetingNote`, `NoteRevision`, their stored properties, module namespace, UUIDs, system occurrence keys, `selectedCalendars` (including empty/missing selections), other preference keys, `default.store` and CloudKit `.none` are preserved. Store initialization failures never reset data. Keep real notes, account data, backup stores and sensitive screenshots outside Git.
+
+[Brand rules](Docs/Brand/DesignSystem.md) document the purple Light/Dark palette, three control levels and four system-font roles. [Rebranding validation](Docs/RebrandingValidation.md) records actual build, test, visual and migration evidence plus untested surfaces.
+
+## Architecture
+
+Views → ViewModels → Domain use cases/services → repository/provider protocols → Data/Infrastructure adapters. App composition files construct concrete dependencies and coordinate windows. Feature ViewModels use Foundation/Observation with `@MainActor @Observable`; SwiftData, EventKit and Foundation Models stay in Data. Export, browser, notifications, login and permission-settings adapters live in Infrastructure. Shared DesignSystem components render values and forward actions.
+
+Calendar providers register through `CalendarAccountCoordinator`. Future provider identities are namespaced by provider/account/calendar. Matching never uses titles alone. Selection remains keyed by stable calendar IDs, and temporarily missing calendars remain selected. All authored stack spacing/padding uses AppSpacing (0/8/16/24/32/40/48); geometry is separate. Every SwiftUI View modifier starts on its own line.
+
+`Tools/CalendarQA.swift` is outside all app/test targets. It alone can create attendee-free synthetic fixtures, tracking IDs in a manifest outside Git and cleaning only those workflow events. The legacy `Meetrail QA` calendar, `[Meetrail QA]` prefix and `/tmp/meetrail-qa-manifest.json` remain to safely identify existing fixtures. The QA executable itself is Kaigi Calendar QA.
+
+## Manual GitHub rename
+
+No remote repository or local origin is changed automatically. The intended repository is [ArtemkaK1/Kaigi](https://github.com/ArtemkaK1/Kaigi). The owner can rename the existing repository in GitHub Settings → General → Repository name, preserving its visibility and rights, or run:
 
 ```sh
-xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug \
-  -derivedDataPath /tmp/MeetrailBuild CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build
-open /tmp/MeetrailBuild/Build/Products/Debug/Meetrail.app
+gh repo rename Kaigi --repo ArtemkaK1/Meetrail --yes
+git remote set-url origin https://github.com/ArtemkaK1/Kaigi.git
+git remote -v
 ```
 
-Ad-hoc builds are for local review; they are not signed/notarized distribution artifacts. macOS may request calendar consent again after an ad-hoc rebuild. No installer or release has been published. First run opens a dedicated Welcome window. Choose Apple / System Calendars to request macOS calendar access, then select visible calendars grouped by account. Skip for now preserves your progress; Settings → Accounts & Calendars remains available. Existing notes, calendar selections, and preferences are retained, and returning users are not forced through setup.
+Use the SSH equivalent `git@github.com:ArtemkaK1/Kaigi.git` if preferred. The filesystem checkout can retain its current directory name. No branch, commit or push was created.
 
-Only Apple / System Calendars connects today. Existing Google/Microsoft/CalDAV calendars already synchronized through macOS remain usable via EventKit. Direct Google, Microsoft, Yandex, Zoho, and CalDAV connections are Coming Soon and will be implemented separately; there are no OAuth clients, tokens, or fake authentication states.
+Notification authorization was verified after the owner allowed Kaigi in macOS (`didGrant: 1`, no error). Five-minute scheduling/replacement is covered by unit tests; sample mode intentionally suppresses scheduled reminders even when its real OS preferences adapter is selected. Actual notification-banner delivery and boot-time login after installation remain manual checks. Launch-at-login registration was tested and restored to Off.
 
-Debug-only `--sample --show-agenda` uses synthetic data without calendar access. Add `--onboarding --fifty-calendars` to review first run and 50 calendars across five accounts. `--empty`, `--one-meeting`, `--fifteen-meetings`, and `--long-titles` exercise layout. Add `--context-history` to seed three earlier weekly occurrences, including long notes and confirmed context, solely in the in-memory sample store. Optional `--test-session ID` persists synthetic onboarding/selection preferences across relaunch; sample notes are in memory. For XCTest Latin typing, select the ABC keyboard input source; restore your preferred source afterward.
+## Distribution
 
-Folder cleanup validation (25 October 2026): the architecture check, signed Debug and Release builds, 43 deterministic unit tests, one synthetic UI smoke test, and `git diff --check` passed. Signing required keychain access outside the restricted shell. Real-calendar integration, on-device AI, external meeting entry, and distribution upload were not rerun for this documentation-only change.
+Use the existing App Store Connect record **Kaigi - Meeting Notes**, bundle ID `com.volrik.kaigi`. Review its metadata, screenshots, privacy/accessibility declarations, age rating, category, rights, sandbox information, and required compliance information before submission. Do not create another App ID or app record. Build/archive manually in Xcode with automatic signing; upload only after explicit owner authorization. Marketing version changes are separate, and build numbers must be checked against accepted App Store builds before an authorized upload.
 
-## Manual distribution
-
-Use the **Meetrail** scheme in Xcode 27 with Automatic signing and the team above. Confirm that the Apple Developer App ID and macOS App Store Connect record both use **`com.volrik.meetrail.app`**. For TestFlight, choose Product → Archive, then select the archive in Organizer and use Distribute App → App Store Connect to upload. Review the version and build number before uploading; wait for App Store Connect processing before assigning testers. See [Apple's distribution guide](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases).
-
-Manage the app target's **Build** value manually in both Debug and Release configurations: start at `1` for an unused app record, then use `2`, `3`, and so on for subsequent uploads. If App Store Connect has already accepted builds for this bundle ID, use a number higher than the latest accepted build. Marketing version changes are separate.
-
-The new bundle ID uses a separate sandbox container, preferences and permission identity. Old notes remain in the old app's container. Back up/export important notes outside Git and retain the old installation until any required data transfer is resolved. No data migration is implemented.
-
-The repository's GitHub Actions publishing workflow, Fastlane setup and Xcode Cloud hooks/test plan/scheme have been removed. Disable or delete any existing **Publish to TestFlight** workflow in App Store Connect → this app → Xcode Cloud, and disable the old GitHub Actions workflow while its removal is pending. Do not rerun historical publishing jobs. Remove the obsolete GitHub `testflight` Environment and its signing secrets when no other automation needs them; keep Apple certificates used for local signing. Removing repository files does not disable workflows stored in Apple's service.
-
-Manual validation continues to use the original **Meetrail** scheme and all existing tests. Real-calendar tests require an account and permission; real AI tests require a ready Apple Intelligence model; UI tests require a working interactive automation session. No distribution upload was performed for this cleanup.
-
-CI-removal validation (28 October 2026): signed Debug and Release builds, 43 unit tests (including the local real-model tests), architecture checks, project parsing and `git diff --check` passed. Real-calendar integration and UI automation were not rerun. Both builds retained the new bundle ID, version `1.0`, build `1` and menu-bar configuration.
-
-## Use
-
-P18 local validation (28 October 2026): signed Debug and Release builds, architecture checks and `git diff --check` passed. After the owner enabled macOS Developer Mode, the full synthetic regression run passed: 44 unit tests and all 16 UI tests, with zero failures. The run covered shared-draft routing, earlier-note synchronization, context confirmation/carryover, revisions, compact layouts, Light/Dark appearance, keyboard navigation, onboarding, settings and accessibility-sized layouts. The new context workflow passed in both appearances. Its initial accessibility query failed to locate the native list row; using the existing explicit accessibility identifier corrected the test without changing application behavior. The real on-device AI cleanup probe completed with synthetic input; semantic accuracy still requires human review. Earlier automation-initialization failures and stalled runs are not counted as passes. The unrelated live-calendar fixture test was explicitly excluded from this run after an earlier attempt stopped at its permission request; no calendar fixtures were created for this UI pass.
-
-Direct Mac testing used only synthetic in-memory notes and three earlier occurrences. It covered Light/Dark appearance, long-record scrolling, native list keyboard selection, regular-window resizing, autosave, earlier-note edits reflected in history, context confirmation and carryover, per-series visibility, revision restoration/recovery, and retaining the current draft when closing the context window. Accessibility-sized text was visually checked; full spoken VoiceOver review, system-wide increased-contrast settings and execution on macOS 15 remain manual checks.
-
-Click a meeting body to edit its occurrence note; Join opens the recognized conference HTTPS link. Multiple or unknown links show their destination in a chooser. Sample fixture links are placeholders, never genuine conferences. Command-left/right moves a day; Command-T returns to Today. Tab navigates controls; standard text editing and undo work in the editor. Right-click the menu bar icon for Settings and Quit; left-click opens or dismisses the agenda. Command-comma opens Settings. The compact chevron returns to the agenda (Command-[). The pin button opens a floating editor. Revisions restores an earlier saved version while preserving the current version as another revision. Export writes a user-selected Markdown file.
-
-History & Context opens a regular, resizable window for the current occurrence and its series. Select an earlier occurrence to inspect its notes and confirmed context; Open note uses the existing floating editor. Current and floating editors share the cached occurrence ViewModel, and saved edits refresh related history snapshots. Opening or closing the context window preserves the current note and any unconfirmed context draft.
-
-Confirmed context is manually reviewed text. Use “Confirm context” to make it eligible for later occurrences, then explicitly carry it into a later note. No task owner, deadline, or completion state is inferred. Notes from disappeared events appear as Calendar history meeting cards on their original agenda day. Fully changed external/calendar identities intentionally do not auto-reattach; export/copy the original text into the intended meeting only after review. There is no standalone notes browser.
-
-Settings includes an On-device AI switch. Clean Up and Structure propose changes to the current note in a Review changes state; Apply saves a revision, while Cancel leaves the original intact. AI availability and processing remain entirely local.
-
-## Architecture and storage
-
-The dependency direction is Views → ViewModels → domain use cases → repository/provider protocols → Data/Infrastructure adapters. `App/DependencyContainer` and the App composition files construct dependencies and coordinate native windows. Features consistently use `@MainActor @Observable` ViewModels with injected protocols/use cases; Views only render, bind, and forward actions. SwiftData objects, EventKit stores, and AI sessions do not enter features.
-
-- `DesignSystem/Tokens` centralizes AppSpacing (0/8/16/24/32/40/48), semantic light/dark AppColors, scaled native system text roles (caption 11, body 13, section 16, title 20) and regular/medium/semibold weights. Custom button labels use the shared 13 pt medium role inside `MeetrailButtonStyle`; standard menu/list/toggle controls retain native behavior. Light popover content uses the semantic window surface, while Dark Mode keeps native material. Geometry metrics are separate from spacing.
-- `Features` contains Agenda, MeetingDetail, Settings, CalendarAccounts, and Onboarding View/ViewModel pairs.
-- `Domain` contains Sendable snapshots, typed IDs, provider/account/calendar/connection models, normalization, selection, visibility, note/context, join and conservative association use cases.
-- `Data` owns the EventKit provider, unchanged SwiftData schema, preferences adapter, and Foundation Models adapter. `Infrastructure` owns notifications/login, validated URL opening, system-settings navigation and user-selected Markdown export.
-
-Register future adapters through `CalendarAccountCoordinator` in the composition root. Provider-neutral calendar descriptors drive the same selection and onboarding screens; occurrence identities are namespaced outside the legacy system provider. No title-only cross-provider deduplication is performed. The lightweight architecture/design check enforces imports, feature adapter boundaries and token use; see [AGENTS.md](AGENTS.md). No third-party package dependencies are used.
-
-The EventKit adapter owns its store and event objects on a private serial actor and exposes cached, immutable catalog snapshots. `CalendarProvider.prepare()` completes catalog preparation before initial visibility is persisted; providers with an immediately available catalog use the default implementation. SwiftData contexts remain on their existing main actor. Opening today's popover reuses an in-flight or current agenda; EventKit, day and time-zone changes still refresh it.
-
-Production events are always read-only. The local series and note UUIDs are independent of EventKit IDs. Matching uses calendar + external event ID, plus the original occurrence date for recurring meetings. One-time meetings retain notes when moved; recurring moves retaining their original slot can preserve notes. Changed external IDs/calendars remain conservatively separate. Calendar cancellations never delete notes.
-
-Notes are stored in Meetrail's sandbox Application Support directory (the system SwiftData `default.store` and sidecars). Preserve the entire store together when backing up. There is no built-in cloud sync or custom encryption. Private drafts and revisions are never written into calendar events. See [SECURITY.md](SECURITY.md).
-
-`Tools/CalendarQA.swift` is separate from every app/test target. It creates attendee-free synthetic fixtures in `Meetrail QA` and writes an identifier manifest outside the repo. Its `--cleanup` path removes only manifest-listed, prefixed, attendee-free events and retains the calendar.
+Historical Xcode Cloud/GitHub publishing workflows may still exist remotely despite local removal. Review/disable them manually before any distribution; do not rerun old publishing jobs. This task does not modify those services or the separate website repository.
 
 ## License and contribution rights
 
-Copyright © 2026 Artemiy Kirillov. Licensed under the official [PolyForm Noncommercial License 1.0.0](LICENSE.md). Meetrail is source-available, not OSI-approved open source. Noncommercial use, study, modification and redistribution are permitted only under the license terms. Commercial use requires separate authorization from the copyright holder. The original author may separately distribute their own original application commercially, subject to third-party and contributor rights.
+Copyright © 2026 Artemiy Kirillov. Licensed under [PolyForm Noncommercial 1.0.0](LICENSE.md). Kaigi is source-available; commercial use requires separate authorization. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). Preserve all copyright/license notices.
 
-Outside code is not automatically accepted. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). No MeetingBar source or assets are used. Apple SDKs/frameworks are used under Apple's applicable terms. There are no third-party package dependencies. Provider artwork remains separately owned and is not covered by Meetrail's license; preserve the [artwork notices and source references](Meetrail/Resources/ProviderArtworkNotices.txt) and bundled Microsoft Fabric Assets license. Apple's installed Calendar icon is rendered locally and is not redistributed.
+No MeetingBar code/assets or third-party package dependencies are used. Provider artwork remains separately owned: preserve the [provider notices](Kaigi/Resources/ProviderArtworkNotices.txt) and bundled Microsoft Fabric Assets license. Apple's Calendar artwork is rendered locally and is not redistributed. See [SECURITY.md](SECURITY.md) for storage and privacy limits.
 
-App Store subtitle candidate: *Meetings and notes, connected*. Naming/trademark clearance and App Store review remain future release tasks.
+Current rebranding validation: signed Debug and universal Release builds passed; 46 unit tests, one live-calendar integration test and all 16 UI tests passed. Architecture, transfer-helper tests, original-to-Kaigi synthetic store compatibility and whitespace checks passed. The installed Release app is `/Users/artemiy/Applications/Kaigi.app`. A contended UI rerun had two focus failures while a duplicate QA instance was running; a clean full UI repeat passed without changing assertions. Full evidence, the baseline legacy-preferences incident and untested surfaces are documented in [the validation report](Docs/RebrandingValidation.md).

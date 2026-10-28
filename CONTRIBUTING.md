@@ -1,6 +1,6 @@
 # Contributing
 
-Meetrail currently welcomes bug reports and discussion. Do not send calendar exports, meeting links, notes, account identifiers, or screenshots containing private information. Use synthetic reproductions.
+Kaigi currently welcomes bug reports and discussion. Do not send calendar exports, meeting links, notes, account identifiers, or screenshots containing private information. Use synthetic reproductions.
 
 External code contributions are not automatically accepted. Before any outside code is merged for intended commercial redistribution, the copyright holder must approve an appropriate contributor-rights agreement covering the necessary commercial licensing and redistribution rights. Opening a pull request does not grant those rights by implication.
 

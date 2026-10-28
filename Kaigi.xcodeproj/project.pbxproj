@@ -1,0 +1,564 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		BA99ED7D308C095900597854 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA99ED67308C095700597854 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA99ED6E308C095700597854;
+			remoteInfo = Kaigi;
+		};
+		BA99ED87308C095900597854 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA99ED67308C095700597854 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA99ED6E308C095700597854;
+			remoteInfo = Kaigi;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		BA99ED6F308C095700597854 /* Kaigi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kaigi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA99ED7C308C095900597854 /* KaigiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KaigiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA99ED86308C095900597854 /* KaigiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KaigiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		BA99ED71308C095700597854 /* Kaigi */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Kaigi;
+			sourceTree = "<group>";
+		};
+		BA99ED7F308C095900597854 /* KaigiTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KaigiTests;
+			sourceTree = "<group>";
+		};
+		BA99ED89308C095900597854 /* KaigiUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KaigiUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BA99ED6C308C095700597854 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		BA99ED79308C095900597854 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		BA99ED83308C095900597854 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BA99ED66308C095700597854 = {
+			isa = PBXGroup;
+			children = (
+				BA99ED71308C095700597854 /* Kaigi */,
+				BA99ED7F308C095900597854 /* KaigiTests */,
+				BA99ED89308C095900597854 /* KaigiUITests */,
+				BA99ED70308C095700597854 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BA99ED70308C095700597854 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BA99ED6F308C095700597854 /* Kaigi.app */,
+				BA99ED7C308C095900597854 /* KaigiTests.xctest */,
+				BA99ED86308C095900597854 /* KaigiUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BA99ED6E308C095700597854 /* Kaigi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA99ED8E308C095A00597854 /* Build configuration list for PBXNativeTarget "Kaigi" */;
+			buildPhases = (
+				BA99ED6B308C095700597854 /* Sources */,
+				BA99ED6C308C095700597854 /* Frameworks */,
+				BA99ED6D308C095700597854 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				BA99ED71308C095700597854 /* Kaigi */,
+			);
+			name = Kaigi;
+			productName = Kaigi;
+			productReference = BA99ED6F308C095700597854 /* Kaigi.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BA99ED7B308C095900597854 /* KaigiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA99ED91308C095A00597854 /* Build configuration list for PBXNativeTarget "KaigiTests" */;
+			buildPhases = (
+				BA99ED78308C095900597854 /* Sources */,
+				BA99ED79308C095900597854 /* Frameworks */,
+				BA99ED7A308C095900597854 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BA99ED7E308C095900597854 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				BA99ED7F308C095900597854 /* KaigiTests */,
+			);
+			name = KaigiTests;
+			productName = KaigiTests;
+			productReference = BA99ED7C308C095900597854 /* KaigiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		BA99ED85308C095900597854 /* KaigiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BA99ED94308C095A00597854 /* Build configuration list for PBXNativeTarget "KaigiUITests" */;
+			buildPhases = (
+				BA99ED82308C095900597854 /* Sources */,
+				BA99ED83308C095900597854 /* Frameworks */,
+				BA99ED84308C095900597854 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BA99ED88308C095900597854 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				BA99ED89308C095900597854 /* KaigiUITests */,
+			);
+			name = KaigiUITests;
+			productName = KaigiUITests;
+			productReference = BA99ED86308C095900597854 /* KaigiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BA99ED67308C095700597854 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					BA99ED6E308C095700597854 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					BA99ED7B308C095900597854 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = BA99ED6E308C095700597854;
+					};
+					BA99ED85308C095900597854 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = BA99ED6E308C095700597854;
+					};
+				};
+			};
+			buildConfigurationList = BA99ED6A308C095700597854 /* Build configuration list for PBXProject "Kaigi" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BA99ED66308C095700597854;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BA99ED70308C095700597854 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BA99ED6E308C095700597854 /* Kaigi */,
+				BA99ED7B308C095900597854 /* KaigiTests */,
+				BA99ED85308C095900597854 /* KaigiUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BA99ED6D308C095700597854 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		BA99ED7A308C095900597854 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		BA99ED84308C095900597854 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BA99ED6B308C095700597854 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		BA99ED78308C095900597854 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		BA99ED82308C095900597854 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BA99ED7E308C095900597854 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA99ED6E308C095700597854 /* Kaigi */;
+			targetProxy = BA99ED7D308C095900597854 /* PBXContainerItemProxy */;
+		};
+		BA99ED88308C095900597854 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA99ED6E308C095700597854 /* Kaigi */;
+			targetProxy = BA99ED87308C095900597854 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		BA99ED8C308C095A00597854 /* Debug configuration for PBXProject "Kaigi" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BA99ED8D308C095A00597854 /* Release configuration for PBXProject "Kaigi" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		BA99ED8F308C095A00597854 /* Debug configuration for PBXNativeTarget "Kaigi" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Kaigi;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Kaigi/Kaigi.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.kaigi;
+				// Preserve SwiftData model runtime identity across the product rename.
+				PRODUCT_MODULE_NAME = Meetrail;
+				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		BA99ED90308C095A00597854 /* Release configuration for PBXNativeTarget "Kaigi" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Kaigi;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Kaigi/Kaigi.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.kaigi;
+				// Preserve SwiftData model runtime identity across the product rename.
+				PRODUCT_MODULE_NAME = Meetrail;
+				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		BA99ED92308C095A00597854 /* Debug configuration for PBXNativeTarget "KaigiTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.KaigiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kaigi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Kaigi";
+			};
+			name = Debug;
+		};
+		BA99ED93308C095A00597854 /* Release configuration for PBXNativeTarget "KaigiTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.KaigiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kaigi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Kaigi";
+			};
+			name = Release;
+		};
+		BA99ED95308C095A00597854 /* Debug configuration for PBXNativeTarget "KaigiUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.KaigiUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = Kaigi;
+			};
+			name = Debug;
+		};
+		BA99ED96308C095A00597854 /* Release configuration for PBXNativeTarget "KaigiUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WX557M9HD2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.KaigiUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = Kaigi;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BA99ED6A308C095700597854 /* Build configuration list for PBXProject "Kaigi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA99ED8C308C095A00597854 /* Debug configuration for PBXProject "Kaigi" */,
+				BA99ED8D308C095A00597854 /* Release configuration for PBXProject "Kaigi" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		BA99ED8E308C095A00597854 /* Build configuration list for PBXNativeTarget "Kaigi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA99ED8F308C095A00597854 /* Debug configuration for PBXNativeTarget "Kaigi" */,
+				BA99ED90308C095A00597854 /* Release configuration for PBXNativeTarget "Kaigi" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		BA99ED91308C095A00597854 /* Build configuration list for PBXNativeTarget "KaigiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA99ED92308C095A00597854 /* Debug configuration for PBXNativeTarget "KaigiTests" */,
+				BA99ED93308C095A00597854 /* Release configuration for PBXNativeTarget "KaigiTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		BA99ED94308C095A00597854 /* Build configuration list for PBXNativeTarget "KaigiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA99ED95308C095A00597854 /* Debug configuration for PBXNativeTarget "KaigiUITests" */,
+				BA99ED96308C095A00597854 /* Release configuration for PBXNativeTarget "KaigiUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BA99ED67308C095700597854 /* Project object */;
+	validationLevel = 1;
+}

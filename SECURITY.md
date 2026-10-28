@@ -2,7 +2,7 @@
 
 Do not put sensitive vulnerability details or private user data in public issues. Use GitHub private vulnerability reporting after the owner enables it, or contact the repository owner privately through their published GitHub profile. No security email address is fabricated here.
 
-Meetrail uses EventKit only to read system calendars. macOS calls the necessary permission “Full Access”; the production gateway contains no calendar-writing API. The calendar entitlement is required by EventKit and does not itself enforce read-only access. A separate local QA executable can create only its own synthetic test fixtures and is excluded from production targets.
+Kaigi uses EventKit only to read system calendars. macOS calls the necessary permission “Full Access”; the production gateway contains no calendar-writing API. The calendar entitlement is required by EventKit and does not itself enforce read-only access. A separate local QA executable can create only its own synthetic test fixtures and is excluded from production targets.
 
 Notes and revisions use a local SwiftData store in the app sandbox. CloudKit is explicitly disabled. There is no backend, authentication service, analytics SDK, recording, microphone access, external LLM, or network-client entitlement. Foundation Models uses the on-device system model. Opening a conference/calendar HTTPS link intentionally hands that URL to the system browser or provider; the destination's own privacy practices apply.
 

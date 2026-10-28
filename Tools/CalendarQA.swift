@@ -1,4 +1,4 @@
-// Separate local QA executable; never part of the Meetrail production target.
+// Separate local QA executable; never part of the Kaigi production target.
 import AppKit
 import EventKit
 
@@ -7,7 +7,7 @@ let manifestURL = URL(fileURLWithPath: "/tmp/meetrail-qa-manifest.json")
 let app = NSApplication.shared
 app.setActivationPolicy(.regular)
 let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 540, height: 220), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-window.title = "Meetrail Calendar QA"
+window.title = "Kaigi Calendar QA"
 let label = NSTextField(wrappingLabelWithString: "Requesting calendar access for isolated, attendee-free QA fixtures…")
 label.frame = NSRect(x: 24, y: 24, width: 490, height: 160); window.contentView?.addSubview(label)
 window.makeKeyAndOrderFront(nil); app.activate(ignoringOtherApps: true)

@@ -1,0 +1,33 @@
+schema_version: 1
+status: approved
+concept:
+  id: Kaigi-A3
+  path: ../../../Docs/Brand/Concepts/Kaigi-A3.png
+  sha256: 600e6ea63f4a6bd3949c829932ce580b88472f5d34033dbc5e5b1f1015457fbc
+approval:
+  explicitly_approved: true
+  approved_at: 2026-10-28
+  evidence_note: Owner said to move back to A3 and use it, requiring clean vector edges without generated artifacts.
+design_lock:
+  recognition_anchor: Small oval above tall tapered lower form with broad rounded top and rounded base.
+  silhouette: Two circular caps connected by straight tangent flanks; separate upper oval.
+  composition: Vertical, optically centered, same gap and proportions as A3.
+  palette: ["#713BD1", "#F5F5F5"]
+  protected_invariants:
+    - A3 silhouette, straight sides, round caps and gap
+    - Matte low-relief purple material with smoothly distributed shading and restrained shadow
+    - No A4 gloss, extra symbols, letters or decorative elements
+  permitted_production_translations:
+    - Clean exact vector reconstruction and optical centering
+    - Native material, color and shadow in Icon Composer
+production_plan:
+  authorized: true
+  delivery_route: icon-composer
+  composer_feasibility: Simple frontal vector silhouette, one group, two forms; feasible.
+  layers:
+    - order: 1
+      id: 01-symbol
+      role: Opaque purple recognition anchor; native background and depth authored in Composer
+      source_decision: svg
+  reapproval_triggers:
+    - Materially changed silhouette, composition, scale, palette or material
