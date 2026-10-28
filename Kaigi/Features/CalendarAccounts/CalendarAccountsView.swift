@@ -35,61 +35,66 @@ struct ProviderConnectionsView: View {
     @Bindable var model: CalendarAccountsViewModel
     @Environment(\.dynamicTypeSize) private var textSize
     private var iconColumn: CGFloat { AppLayout.providerIconColumn * AppTypography.scale(for: textSize) }
-    private let columns = [GridItem(.flexible(), spacing: AppSpacing.xs, alignment: .top), GridItem(.flexible(), spacing: AppSpacing.xs, alignment: .top)]
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("Calendars synchronized through macOS are available now.")
                     .appText(.caption)
                     .foregroundStyle(AppColors.secondary)
-                LazyVGrid(columns: columns, alignment: .leading, spacing: AppSpacing.xs) {
-                    ForEach(model.providers) { card in
-                        Grid(alignment: .topLeading, horizontalSpacing: AppSpacing.xs, verticalSpacing: AppSpacing.xs) {
-                            GridRow {
-                                ProviderIcon(kind: card.kind)
-                                    .frame(width: iconColumn)
-                                Text(card.kind.title)
-                                    .appText(.body, weight: .medium)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .accessibilityIdentifier("provider-name-\(card.kind.rawValue)")
-                            }
-                            .accessibilityElement(children: .contain)
-                            GridRow {
-                                Image(systemName: "checkmark.circle")
-                                    .appText(.caption)
-                                    .foregroundStyle(AppColors.secondary)
-                                    .frame(width: iconColumn)
-                                    .opacity(card.state == .connected ? 1 : 0)
-                                    .accessibilityHidden(true)
-                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                    Text(card.statusDescription)
-                                        .appText(.caption)
-                                        .foregroundStyle(AppColors.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .accessibilityIdentifier("provider-status-\(card.kind.rawValue)")
-                                    if card.canConnect {
-                                        Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { model.requestConnection(card.kind) })
-                                            .buttonStyle(KaigiButtonStyle())
-                                            .disabled(model.connecting)
-                                            .accessibilityLabel(card.state == .permissionDenied ? "Open calendar privacy settings" : "Connect \(card.kind.title)")
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    ForEach(Array(stride(from: 0, to: model.providers.count, by: 2)), id: \.self) { row in
+                        HStack(alignment: .top, spacing: AppSpacing.xs) {
+                            ForEach(model.providers[row..<min(row + 2, model.providers.count)]) { card in
+                                Grid(alignment: .topLeading, horizontalSpacing: AppSpacing.xs, verticalSpacing: AppSpacing.xs) {
+                                    GridRow {
+                                        ProviderIcon(kind: card.kind)
+                                            .frame(width: iconColumn)
+                                        Text(card.kind.title)
+                                            .appText(.body, weight: .medium)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .accessibilityIdentifier("provider-name-\(card.kind.rawValue)")
                                     }
+                                    .accessibilityElement(children: .contain)
+                                    GridRow {
+                                        Image(systemName: "checkmark.circle")
+                                            .appText(.caption)
+                                            .foregroundStyle(AppColors.secondary)
+                                            .frame(width: iconColumn)
+                                            .opacity(card.state == .connected ? 1 : 0)
+                                            .accessibilityHidden(true)
+                                        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                            Text(card.statusDescription)
+                                                .appText(.caption)
+                                                .foregroundStyle(AppColors.secondary)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                                .accessibilityIdentifier("provider-status-\(card.kind.rawValue)")
+                                            if card.canConnect {
+                                                Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { model.requestConnection(card.kind) })
+                                                    .buttonStyle(KaigiButtonStyle())
+                                                    .disabled(model.connecting)
+                                                    .accessibilityLabel(card.state == .permissionDenied ? "Open calendar privacy settings" : "Connect \(card.kind.title)")
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .accessibilityElement(children: .contain)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .appText(.body, weight: .medium)
+                                .padding(AppSpacing.xs)
+                                .frame(maxWidth: .infinity, minHeight: AppLayout.providerCardHeight, maxHeight: .infinity, alignment: .topLeading)
+                                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: AppLayout.cornerRadius)
+                                        .strokeBorder(AppColors.border, lineWidth: 1)
+                                        .allowsHitTesting(false)
+                                }
+                                .accessibilityElement(children: .contain)
+                                .accessibilityIdentifier("provider-card-\(card.kind.rawValue)")
                             }
-                            .accessibilityElement(children: .contain)
                         }
-                        .appText(.body, weight: .medium)
-                        .padding(AppSpacing.xs)
-                        .frame(maxWidth: .infinity, minHeight: AppLayout.providerCardHeight, alignment: .topLeading)
-                        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: AppLayout.cornerRadius)
-                                .strokeBorder(AppColors.border, lineWidth: 1)
-                                .allowsHitTesting(false)
-                        }
-                        .accessibilityElement(children: .contain)
-                        .accessibilityIdentifier("provider-card-\(card.kind.rawValue)")
+                        // Measure each row at its ideal height, then let both cards fill it.
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 if model.connecting {

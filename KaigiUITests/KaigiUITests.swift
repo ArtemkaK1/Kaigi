@@ -182,6 +182,7 @@ import AppKit
         accounts.click()
         XCTAssertTrue(app.windows["Accounts & Calendars"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["Connected through macOS"].exists)
+        assertProviderCardRows(in: app.windows["Accounts & Calendars"])
     }
     func testOnboardingConnectionSelectionAndCompletion() throws {
         let app = launch(["--onboarding", "--fifty-calendars"])
@@ -322,8 +323,28 @@ import AppKit
         XCTAssertFalse(app.buttons["Clean Up"].isEnabled)
     }
 
+    private func assertProviderCardRows(in window: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        for pair in [["system", "google"], ["microsoft", "yandex"], ["zoho", "calDAV"]] {
+            let cards = pair.map { window.descendants(matching: .any)["provider-card-\($0)"].firstMatch }
+            XCTAssertTrue(cards.allSatisfy(\.exists), file: file, line: line)
+            let first = cards[0].frame
+            let second = cards[1].frame
+            XCTAssertGreaterThan(first.height, 0, file: file, line: line)
+            XCTAssertEqual(first.minY, second.minY, accuracy: 1, file: file, line: line)
+            XCTAssertEqual(first.height, second.height, accuracy: 1, file: file, line: line)
+            XCTAssertEqual(first.width, second.width, accuracy: 1, file: file, line: line)
+            for (kind, card) in zip(pair, cards) {
+                for prefix in ["provider-name-", "provider-status-"] {
+                    let text = window.staticTexts[prefix + kind].frame
+                    XCTAssertGreaterThanOrEqual(text.minX, card.frame.minX, file: file, line: line)
+                    XCTAssertLessThanOrEqual(text.maxX, card.frame.maxX, file: file, line: line)
+                    XCTAssertLessThanOrEqual(text.maxY, card.frame.maxY, file: file, line: line)
+                }
+            }
+        }
+    }
     func testProviderStatusColumnsAcrossAppearanceAndTextSizes() throws {
-        for (appearance, large) in [("Aqua", false), ("DarkAqua", false), ("DarkAqua", true)] {
+        for (appearance, large) in [("Aqua", false), ("DarkAqua", false), ("Aqua", true), ("DarkAqua", true)] {
             let app = launch(["--onboarding", "--fifty-calendars", "-NSAppearance", appearance] + (large ? ["--large-text"] : []))
             let window = app.windows["Welcome to Kaigi"]
             XCTAssertTrue(window.waitForExistence(timeout: 8))
@@ -332,10 +353,13 @@ import AppKit
             let status = window.staticTexts["provider-status-system"]
             XCTAssertTrue(status.waitForExistence(timeout: 3))
             XCTAssertEqual(status.value as? String, "Not connected")
+            assertProviderCardRows(in: window)
+            capture(window, "Synthetic equal-height disconnected providers \(appearance) large=\(large)")
             XCTAssertEqual(name.frame.minX, status.frame.minX, accuracy: 1)
             XCTAssertGreaterThanOrEqual(status.frame.minY, name.frame.maxY)
             window.buttons["Connect Apple / System Calendars"].click()
             XCTAssertTrue(window.staticTexts["Connected through macOS"].waitForExistence(timeout: 3))
+            assertProviderCardRows(in: window)
             XCTAssertEqual(name.frame.minX, status.frame.minX, accuracy: 1)
             for kind in ["google", "microsoft", "yandex", "zoho", "calDAV"] {
                 let title = window.staticTexts["provider-name-\(kind)"]
@@ -356,6 +380,8 @@ import AppKit
         XCTAssertEqual(status.value as? String, "Calendar access denied")
         XCTAssertEqual(title.frame.minX, status.frame.minX, accuracy: 1)
         XCTAssertTrue(denied.buttons["Open calendar privacy settings"].exists)
+        assertProviderCardRows(in: denied.windows["Welcome to Kaigi"])
+        capture(denied.windows["Welcome to Kaigi"], "Synthetic equal-height permission-denied providers")
         denied.terminate()
     }
     func testAIReviewErrorDoesNotOfferSaveRetryForSavedNotes() throws {
