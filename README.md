@@ -21,13 +21,9 @@ The P11 local signed suite passed 64 executions with no failures or skips, inclu
 
 ## Build and run
 
-Manual TestFlight publishing is configured in **Publish to TestFlight** (GitHub Actions + Fastlane). End-to-end signing and upload still require an authorized run with the owner's Team API Key.
+Build and publish manually in Xcode. The app identity is `com.volrik.meetrail.app`, team `WX557M9HD2`, version `1.0`, build `1`. No CI build, automatic upload or build-number update is configured.
 
-Archive/export uses `umask 022` so installed app resources remain readable by non-root users. The temporary API key remains `600` inside a `700` directory and is removed on failure too. Package verification rejects unreadable files or inaccessible directories before upload. Run 40223904838 passed archive/export and signature checks but Apple rejected the upload with error 90255; the permission fix still needs an authorized publishing run to verify acceptance and processing.
-
-Permission-fix validation: workflow/Ruby checks, 22 CI tests, 42 deterministic app tests, signed Debug/Release builds, architecture checks, and `git diff --check` passed locally. Synthetic packages confirmed that the permission check rejects signing resources created under `077` and accepts those created under `022`. UI, real-calendar, on-device AI, and distribution publishing were not rerun for this CI change.
-
-Open `Meetrail.xcodeproj`, select the Meetrail scheme and My Mac, and build/run. The existing automatic-signing configuration uses Team `WX557M9HD2` and Bundle ID `com.volrik.meetrail`; supply an authorized Mac Development certificate/private key for that team, or choose your own team and bundle ID for your local build.
+Open `Meetrail.xcodeproj`, select the Meetrail scheme and My Mac, and build/run. The automatic-signing configuration uses Team `WX557M9HD2` and Bundle ID `com.volrik.meetrail.app`; supply an authorized development certificate/private key for that team, or choose your own team and bundle ID for your local build.
 
 ```sh
 xcodebuild -project Meetrail.xcodeproj -scheme Meetrail -configuration Debug build
@@ -51,6 +47,20 @@ Only Apple / System Calendars connects today. Existing Google/Microsoft/CalDAV c
 Debug-only `--sample --show-agenda` uses synthetic data without calendar access. Add `--onboarding --fifty-calendars` to review first run and 50 calendars across five accounts. `--empty`, `--one-meeting`, `--fifteen-meetings`, and `--long-titles` exercise layout. Optional `--test-session ID` persists synthetic onboarding/selection preferences across relaunch; sample notes are in memory. For XCTest Latin typing, select the ABC keyboard input source; restore your preferred source afterward.
 
 Folder cleanup validation (25 October 2026): the architecture check, signed Debug and Release builds, 43 deterministic unit tests, one synthetic UI smoke test, and `git diff --check` passed. Signing required keychain access outside the restricted shell. Real-calendar integration, on-device AI, external meeting entry, and distribution upload were not rerun for this documentation-only change.
+
+## Manual distribution
+
+Use the **Meetrail** scheme in Xcode 27 with Automatic signing and the team above. Confirm that the Apple Developer App ID and macOS App Store Connect record both use **`com.volrik.meetrail.app`**. For TestFlight, choose Product → Archive, then select the archive in Organizer and use Distribute App → App Store Connect to upload. Review the version and build number before uploading; wait for App Store Connect processing before assigning testers. See [Apple's distribution guide](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases).
+
+Manage the app target's **Build** value manually in both Debug and Release configurations: start at `1` for an unused app record, then use `2`, `3`, and so on for subsequent uploads. If App Store Connect has already accepted builds for this bundle ID, use a number higher than the latest accepted build. Marketing version changes are separate.
+
+The new bundle ID uses a separate sandbox container, preferences and permission identity. Old notes remain in the old app's container. Back up/export important notes outside Git and retain the old installation until any required data transfer is resolved. No data migration is implemented.
+
+The repository's GitHub Actions publishing workflow, Fastlane setup and Xcode Cloud hooks/test plan/scheme have been removed. Disable or delete any existing **Publish to TestFlight** workflow in App Store Connect → this app → Xcode Cloud, and disable the old GitHub Actions workflow while its removal is pending. Do not rerun historical publishing jobs. Remove the obsolete GitHub `testflight` Environment and its signing secrets when no other automation needs them; keep Apple certificates used for local signing. Removing repository files does not disable workflows stored in Apple's service.
+
+Manual validation continues to use the original **Meetrail** scheme and all existing tests. Real-calendar tests require an account and permission; real AI tests require a ready Apple Intelligence model; UI tests require a working interactive automation session. No distribution upload was performed for this cleanup.
+
+CI-removal validation (28 October 2026): signed Debug and Release builds, 43 unit tests (including the local real-model tests), architecture checks, project parsing and `git diff --check` passed. Real-calendar integration and UI automation were not rerun. Both builds retained the new bundle ID, version `1.0`, build `1` and menu-bar configuration.
 
 ## Use
 

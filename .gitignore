@@ -17,8 +17,6 @@ xcuserdata/
 *.log
 qa-manifest*.json
 Screenshots/
-.bundle/
-vendor/bundle/
 *.xcarchive/
 *.pkg
 *.ipa
@@ -28,6 +26,3 @@ vendor/bundle/
 *.key
 *.keychain*
 __pycache__/
-fastlane/report.xml
-fastlane/README.md
-fastlane/test_output/
