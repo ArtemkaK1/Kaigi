@@ -29,7 +29,6 @@ struct AgendaView: View {
                 HStack(spacing: AppSpacing.xs) {
                     InlineMessage(text: error, isError: true)
                     Button("Dismiss", action: model.dismissError)
-                        .appText(.caption)
                         .buttonStyle(MeetrailButtonStyle())
                 }
                 .padding(AppSpacing.xs)
@@ -38,6 +37,7 @@ struct AgendaView: View {
         .padding(.vertical, AppSpacing.xs)
         .frame(width: AppLayout.panelWidth)
         .fixedSize(horizontal: false, vertical: true)
+        .background(AppColors.popoverBackground)
         .foregroundStyle(AppColors.primary)
         .tint(AppColors.accent)
         .onGeometryChange(for: CGFloat.self) {
@@ -63,7 +63,6 @@ struct AgendaView: View {
             .keyboardShortcut(.leftArrow, modifiers: .command)
             Button("Today", action: model.today)
                 .buttonStyle(MeetrailButtonStyle(showsBorder: false))
-                .appText(.caption, weight: .medium)
                 .keyboardShortcut("t", modifiers: .command)
             SymbolButton(symbol: "chevron.right", label: "Next day", showsBorder: false) {
                 model.move(1)
@@ -91,7 +90,6 @@ struct AgendaView: View {
                         .foregroundStyle(AppColors.secondary)
                     if model.connection != .connected {
                         Button("Connect calendars", action: model.connect)
-                            .appText(.body, weight: .medium)
                             .buttonStyle(MeetrailButtonStyle(prominent: true))
                     }
                 }
@@ -134,7 +132,6 @@ struct AgendaView: View {
                 }
                 if model.connection != .connected {
                     Button("Connect calendars", action: model.connect)
-                        .appText(.caption)
                         .buttonStyle(MeetrailButtonStyle())
                 }
             }

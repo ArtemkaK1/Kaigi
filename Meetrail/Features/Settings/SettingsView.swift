@@ -14,7 +14,6 @@ struct SettingsView: View {
                     Image(systemName: "chevron.right")
                 }
             }
-            .appText(.body, weight: .medium)
             .buttonStyle(MeetrailButtonStyle(showsBorder: false))
             Divider()
                 .overlay(AppColors.border)

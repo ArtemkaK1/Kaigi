@@ -11,7 +11,6 @@ struct NoteEditorView: View {
                         .keyboardShortcut("[", modifiers: .command)
                 }
                 Spacer(minLength: AppSpacing.xs)
-                SymbolButton(symbol: "clock.arrow.circlepath", label: "Meeting history", action: model.toggleHistory)
                 SymbolButton(symbol: "square.and.arrow.up", label: "Export Markdown", action: model.export)
                 if back != nil {
                     SymbolButton(symbol: "pin", label: "Float notes", action: model.float)
@@ -57,7 +56,6 @@ struct NoteEditorView: View {
                     .foregroundStyle(model.saveStatus == "Saved locally" ? AppColors.secondary : AppColors.error)
                 Spacer(minLength: AppSpacing.xs)
                 Button("Revisions", action: model.toggleRevisions)
-                    .appText(.caption)
                     .buttonStyle(MeetrailButtonStyle())
             }
             if let error = model.error {
@@ -134,85 +132,14 @@ struct NoteEditorView: View {
                 .padding(AppSpacing.sm)
                 .background(AppColors.selected, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
             }
-            context
-            if model.showingHistory {
-                Divider()
-                    .overlay(AppColors.border)
-                Text("Meeting history")
-                    .appText(.body, weight: .semibold)
-                    .accessibilityAddTraits(.isHeader)
-                if model.isRecurring {
-                    Toggle("Use previous context", isOn: Binding(get: { model.carryEnabled }, set: model.setCarryEnabled))
-                        .appText(.caption)
-                }
-                if model.history.isEmpty {
-                    Text("No other saved occurrences")
-                        .appText(.caption)
-                        .foregroundStyle(AppColors.secondary)
-                }
-                ForEach(model.history) { record in
-                    Button {
-                        model.openHistory(record)
-                    } label: {
-                        Label(record.start.formatted(date: .abbreviated, time: .shortened), systemImage: "note.text")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .appText(.caption)
-                    .buttonStyle(MeetrailButtonStyle())
-                    .accessibilityLabel("Open meeting history \(record.start.formatted())")
-                }
+            Button(action: model.showHistoryAndContext) {
+                Label("History & Context", systemImage: "clock.arrow.circlepath")
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .buttonStyle(MeetrailButtonStyle())
+            .accessibilityHint("Opens meeting history and confirmed context in a separate window")
         }
         .padding(AppSpacing.sm)
         .foregroundStyle(AppColors.primary)
-    }
-    private var context: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            if !model.previous.isEmpty {
-                Divider()
-                    .overlay(AppColors.border)
-                Text("Previous context")
-                    .appText(.body, weight: .semibold)
-                    .accessibilityAddTraits(.isHeader)
-                ForEach(model.previous.prefix(5)) { older in
-                    Text(older.start.formatted(date: .abbreviated, time: .shortened))
-                        .appText(.caption)
-                        .foregroundStyle(AppColors.secondary)
-                    Text(older.confirmedContext)
-                        .appText(.body)
-                        .textSelection(.enabled)
-                    Button("Carry into notes") {
-                        model.carry(older)
-                    }
-                    .appText(.caption)
-                    .buttonStyle(MeetrailButtonStyle())
-                }
-            }
-            HStack(spacing: AppSpacing.xs) {
-                Text("Context for next time")
-                    .appText(.caption, weight: .medium)
-                    .foregroundStyle(AppColors.secondary)
-                Spacer(minLength: AppSpacing.xs)
-                Button(model.showingContext ? "Cancel" : "Edit", action: model.toggleContext)
-                    .appText(.caption)
-                    .buttonStyle(MeetrailButtonStyle())
-            }
-            if model.showingContext {
-                TextEditor(text: $model.contextDraft)
-                    .appText(.body)
-                    .scrollContentBackground(.hidden)
-                    .padding(AppSpacing.xs)
-                    .frame(height: AppLayout.providerCardHeight)
-                    .background(AppColors.editor, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
-                    .accessibilityLabel("Context to confirm")
-                Button("Confirm context", action: model.confirmContext)
-                    .appText(.caption, weight: .medium)
-                    .buttonStyle(MeetrailButtonStyle())
-            } else if !model.note.confirmedContext.isEmpty {
-                Text(model.note.confirmedContext)
-                    .appText(.body)
-                    .textSelection(.enabled)
-            }
-        }
     }
 }

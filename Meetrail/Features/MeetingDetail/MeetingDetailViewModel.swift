@@ -17,7 +17,7 @@ import Observation
     private(set) var error: String?
     var showingRevisions = false
     var showingContext = false
-    var showingHistory = false
+    private(set) var selectedHistoryID: NoteID?
     private(set) var history: [NoteRecord] = []
     private(set) var aiEnabled: Bool
     private(set) var revisions: [RevisionRecord] = []
@@ -30,6 +30,8 @@ import Observation
     var unavailableReason: String? { aiEnabled ? ai.unavailableReason : "AI is off. Enable it in Settings." }
     var canRefine: Bool { !refining && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && unavailableReason == nil }
     var isRecurring: Bool { meeting?.recurring == true }
+    var selectedHistory: NoteRecord? { history.first { $0.id == selectedHistoryID } }
+    var canCarrySelectedHistory: Bool { previous.contains { $0.id == selectedHistoryID } }
     init(note: NoteRecord, meeting: Meeting?, notes: NoteUseCases, context: MeetingContextUseCase, ai: any AIRefinementService, preferences: any PreferencesService, join: ConferenceJoinUseCase, actions: any ApplicationActions, onSaved: @escaping () -> Void) {
         self.note = note; self.meeting = meeting; self.notes = notes; self.context = context; self.ai = ai
         self.preferences = preferences; aiEnabled = preferences.aiEnabled
@@ -72,7 +74,15 @@ import Observation
             previous = carryEnabled ? try context.previous(for: note) : []
         } catch { self.error = error.localizedDescription }
     }
-    func toggleHistory() { showingHistory.toggle(); reloadContext() }
+    func showHistoryAndContext() {
+        reloadContext()
+        actions.showMeetingContext(note.id)
+    }
+    func selectHistory(_ id: NoteID?) {
+        guard let id, id != note.id else { selectedHistoryID = nil; return }
+        guard history.contains(where: { $0.id == id }) else { return }
+        selectedHistoryID = id
+    }
     func openHistory(_ record: NoteRecord) {
         guard history.contains(where: { $0.id == record.id && $0.seriesID == note.seriesID }) else { return }
         actions.showFloatingNote(record.id)

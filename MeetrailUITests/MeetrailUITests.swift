@@ -53,12 +53,77 @@ import AppKit
         app.buttons["Open notes for Weekly planning"].click()
         let editor = app.textViews["Meeting notes"]
         editor.click(); editor.typeText("Unresolved: review scope")
-        app.buttons["Meeting history"].click()
-        XCTAssertTrue(app.staticTexts["No other saved occurrences"].exists)
+        app.buttons["History & Context"].click()
+        let history = app.windows["History & Context — Weekly planning"]
+        XCTAssertTrue(history.waitForExistence(timeout: 3))
+        XCTAssertTrue(history.staticTexts["No other saved occurrences"].exists)
+        history.typeKey("w", modifierFlags: .command)
+        app.statusItems.firstMatch.click()
+        XCTAssertTrue(app.buttons["Back to agenda"].waitForExistence(timeout: 3))
         app.buttons["Back to agenda"].click()
         XCTAssertFalse(app.buttons["Saved notes"].exists)
         app.buttons["Open notes for Weekly planning"].click()
         XCTAssertEqual(app.textViews["Meeting notes"].value as? String, "Unresolved: review scope")
+    }
+    func testContextWindowCarryConfirmationAndSharedEarlierEditor() throws {
+        for appearance in ["Aqua", "DarkAqua"] {
+            let app = launch(["--context-history", "-NSAppearance", appearance, "-AppleLocale", "en_US"])
+            app.buttons["Open notes for Weekly planning"].click()
+            let editor = app.textViews["Meeting notes"]
+            XCTAssertTrue(editor.waitForExistence(timeout: 3))
+            editor.click(); editor.typeText("Current occurrence draft")
+            let panel = app.popovers["Meetrail agenda"]
+            XCTAssertLessThan(panel.frame.height, 540, "Previous records do not expand the note popover")
+            XCTAssertFalse(app.staticTexts["Previous confirmed context"].exists)
+            let compact = XCTAttachment(screenshot: panel.screenshot())
+            compact.name = "P18 compact note editor \(appearance)"; compact.lifetime = .keepAlways; add(compact)
+            app.buttons["History & Context"].click()
+            let window = app.windows["History & Context — Weekly planning"]
+            XCTAssertTrue(window.waitForExistence(timeout: 3))
+            XCTAssertFalse(panel.exists)
+            XCTAssertTrue(window.checkBoxes["Use previous context"].exists)
+            window.typeKey(.downArrow, modifierFlags: [])
+            XCTAssertTrue(window.buttons["Open note"].waitForExistence(timeout: 3))
+            window.typeKey(.downArrow, modifierFlags: [])
+            let previousText = window.staticTexts["history-note-content"]
+            XCTAssertGreaterThan((previousText.value as? String ?? previousText.label).count, 2000)
+            let longNote = XCTAttachment(screenshot: window.screenshot())
+            longNote.name = "P18 earlier long note \(appearance)"; longNote.lifetime = .keepAlways; add(longNote)
+            window.typeKey(.upArrow, modifierFlags: [])
+            window.buttons["Carry into current notes"].click()
+            window.buttons["Open note"].click()
+            let floating = app.windows["Meetrail — Weekly planning"]
+            XCTAssertTrue(floating.waitForExistence(timeout: 3))
+            let earlierEditor = floating.textViews["Meeting notes"]
+            earlierEditor.click(); earlierEditor.typeKey("a", modifierFlags: .command); earlierEditor.typeText("Earlier note revised")
+            floating.typeKey("w", modifierFlags: .command)
+            XCTAssertEqual(window.staticTexts["history-note-content"].value as? String, "Earlier note revised")
+            let current = window.descendants(matching: .any).matching(identifier: "context-current-occurrence").firstMatch
+            XCTAssertTrue(current.exists); current.click()
+            window.checkBoxes["Use previous context"].click()
+            XCTAssertTrue(window.staticTexts["Previous context is off for this series."].exists)
+            window.checkBoxes["Use previous context"].click()
+            window.buttons["Edit"].click()
+            window.textViews["Context to confirm"].click()
+            window.textViews["Context to confirm"].typeText("Confirmed for the next meeting")
+            window.buttons["Confirm context"].click()
+            XCTAssertTrue(window.staticTexts["Confirmed for the next meeting"].exists)
+            let context = XCTAttachment(screenshot: window.screenshot())
+            context.name = "P18 confirmed context \(appearance)"; context.lifetime = .keepAlways; add(context)
+            window.typeKey("w", modifierFlags: .command)
+            app.statusItems.firstMatch.click()
+            XCTAssertTrue(editor.waitForExistence(timeout: 3))
+            let currentText = try XCTUnwrap(editor.value as? String)
+            XCTAssertTrue(currentText.hasPrefix("Current occurrence draft"))
+            XCTAssertTrue(currentText.contains("Review the draft at the next meeting."))
+            XCTAssertTrue(app.staticTexts["Saved locally"].exists)
+            app.buttons["Revisions"].click()
+            XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Restore ")).firstMatch.exists)
+            app.buttons["Revisions"].click()
+            app.buttons["History & Context"].click()
+            XCTAssertTrue(window.staticTexts["Confirmed for the next meeting"].waitForExistence(timeout: 3))
+            app.terminate()
+        }
     }
     func testEmptyStateAndStatusItemDismissal() throws {
         let app = launch(["--empty"])

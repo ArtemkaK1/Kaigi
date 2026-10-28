@@ -12,6 +12,7 @@ import SwiftUI
     init(exporter: MarkdownExporter) { self.exporter = exporter }
     func showAccounts() { windows?.showAccounts() }
     func showFloatingNote(_ id: NoteID) { windows?.showFloatingNote(id) }
+    func showMeetingContext(_ id: NoteID) { windows?.showMeetingContext(id) }
     func export(_ document: MarkdownDocument) async throws { try await exporter.export(document) }
     func dismissOnboarding() { windows?.closeOnboarding() }
 }
@@ -72,6 +73,7 @@ import SwiftUI
     private var onboardingWindow: NSWindow?
     private var accountsWindow: NSWindow?
     private var floatingPanels: [NoteID: AgendaPanel] = [:]
+    private var contextWindows: [NoteID: NSWindow] = [:]
     private var notificationTokens: [NSObjectProtocol] = []
     init(container: DependencyContainer) { self.container = container }
     func start() {
@@ -196,6 +198,22 @@ import SwiftUI
         ); host.sizingOptions = []; window.contentViewController = host
         window.setContentSize(NSSize(width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight)); window.center(); return window
     }
+    func showMeetingContext(_ id: NoteID) {
+        do {
+            let detail = try container.detail(id: id)
+            detail.reloadContext()
+            if contextWindows[id] == nil {
+                let window = makeWindow(title: "History & Context — \(detail.note.title)", root: MeetingContextView(model: detail))
+                window.setContentSize(NSSize(width: AppLayout.contextWidth, height: AppLayout.contextHeight))
+                window.minSize = NSSize(width: AppLayout.contextMinimumWidth, height: AppLayout.contextMinimumHeight)
+                window.center()
+                contextWindows[id] = window
+            }
+            closeAgenda()
+            NSApp.activate(ignoringOtherApps: true)
+            contextWindows[id]?.makeKeyAndOrderFront(nil)
+        } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
+    }
     func showFloatingNote(_ id: NoteID) {
         do {
             if let panel = floatingPanels[id] { NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil); return }
@@ -216,5 +234,6 @@ import SwiftUI
         guard let window = notification.object as? NSWindow else { return }
         if window === onboardingWindow { container.onboarding.windowClosed() }
         if let id = floatingPanels.first(where: { $0.value === window })?.key { floatingPanels.removeValue(forKey: id) }
+        if let id = contextWindows.first(where: { $0.value === window })?.key { contextWindows.removeValue(forKey: id) }
     }
 }

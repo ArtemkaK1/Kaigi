@@ -32,6 +32,13 @@ enum AppLayout {
     static let onboardingReadyHeight: CGFloat = 256
     static let onboardingHeight: CGFloat = 440
     static let reviewHeight: CGFloat = 480 // Debug-only constrained-display fixture.
+    static let contextWidth: CGFloat = 720
+    static let contextHeight: CGFloat = 560
+    static let contextMinimumWidth: CGFloat = 600
+    static let contextMinimumHeight: CGFloat = 400
+    static let contextSidebarMinimum: CGFloat = 160
+    static let contextSidebarIdeal: CGFloat = 192
+    static let contextSidebarMaximum: CGFloat = 240
 }
 
 // Shared button geometry. Widths/heights are minimums except equal-width
@@ -48,6 +55,10 @@ enum AppColors {
     static let secondary = Color(nsColor: .secondaryLabelColor)
     static let disabled = Color(nsColor: .tertiaryLabelColor)
     static let background = Color(nsColor: .windowBackgroundColor)
+    // Anchor light content to a native neutral surface; keep native dark vibrancy.
+    static let popoverBackground = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .clear : .windowBackgroundColor
+    })
     static let surface = Color(nsColor: .controlBackgroundColor)
     static let editor = Color(nsColor: .textBackgroundColor)
     static let border = Color(nsColor: .separatorColor)
@@ -64,6 +75,8 @@ enum AppTextRole {
     var baseSize: Double { switch self { case .caption: 11; case .body: 13; case .section: 16; case .title: 20 } }
 }
 enum AppTypography {
+    static let buttonRole = AppTextRole.body
+    static let buttonWeight = AppFontWeight.medium
     // macOS can leave ScaledMetric unchanged for an explicit Dynamic Type environment.
     // Keep native scaling when it is larger, and honor the requested size as a floor.
     static func scale(for size: DynamicTypeSize) -> Double {

@@ -40,7 +40,10 @@ import Foundation
     }
     func detail(note: NoteRecord, meeting: Meeting?) -> MeetingDetailViewModel {
         if let existing = detailModels[note.id] { if let meeting { existing.updateMeeting(meeting) }; existing.reloadContext(); return existing }
-        let model = MeetingDetailViewModel(note: note, meeting: meeting, notes: noteUseCases, context: contextUseCase, ai: ai, preferences: systemPreferences, join: joinUseCase, actions: actions, onSaved: { [weak self] in self?.agenda.notesChanged() })
+        let model = MeetingDetailViewModel(note: note, meeting: meeting, notes: noteUseCases, context: contextUseCase, ai: ai, preferences: systemPreferences, join: joinUseCase, actions: actions, onSaved: { [weak self, seriesID = note.seriesID] in
+            self?.agenda.notesChanged()
+            self?.detailModels.values.filter { $0.note.seriesID == seriesID }.forEach { $0.reloadContext() }
+        })
         detailModels[note.id] = model; return model
     }
     func detail(id: NoteID) throws -> MeetingDetailViewModel { detail(note: try noteUseCases.note(id), meeting: nil) }

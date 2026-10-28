@@ -70,7 +70,6 @@ struct ProviderConnectionsView: View {
                                         .accessibilityIdentifier("provider-status-\(card.kind.rawValue)")
                                     if card.canConnect {
                                         Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { model.requestConnection(card.kind) })
-                                            .appText(.body, weight: .medium)
                                             .buttonStyle(MeetrailButtonStyle())
                                             .disabled(model.connecting)
                                             .accessibilityLabel(card.state == .permissionDenied ? "Open calendar privacy settings" : "Connect \(card.kind.title)")
@@ -127,7 +126,6 @@ struct CalendarSelectionView: View {
             if !model.hasConnectedProvider {
                 InlineMessage(text: "Connect system calendars to choose visible calendars.")
                 Button("Connect Apple / System Calendars", action: model.requestSystemConnection)
-                    .appText(.body)
                     .buttonStyle(MeetrailButtonStyle(prominent: true))
             } else if model.catalog.calendars.isEmpty {
                 InlineMessage(text: "No calendars are currently exposed by macOS. Direct provider connections are coming soon.")
@@ -147,7 +145,6 @@ struct CalendarSelectionView: View {
                                     }
                                     .accessibilityLabel("Deselect all calendars in \(group.account.name)")
                                 }
-                                .appText(.caption)
                                 .buttonStyle(MeetrailButtonStyle())
                                 ForEach(group.calendars) { calendar in
                                     Toggle(isOn: Binding(get: { model.selectedIDs.contains(calendar.id) }, set: { model.setCalendar(calendar.id, visible: $0) })) {

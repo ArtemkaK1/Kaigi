@@ -44,6 +44,7 @@ extension CalendarProvider {
 @MainActor protocol ApplicationActions: AnyObject {
     func showAccounts()
     func showFloatingNote(_ id: NoteID)
+    func showMeetingContext(_ id: NoteID)
     func export(_ document: MarkdownDocument) async throws
 }
 

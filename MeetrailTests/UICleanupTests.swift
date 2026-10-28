@@ -4,6 +4,44 @@ import UserNotifications
 @testable import Meetrail
 
 @MainActor struct UICleanupTests {
+    @Test func contextWindowSharesDraftAndSynchronizesEarlierNoteEdits() throws {
+        let fixture = try TestComposition(); defer { fixture.clearPreferences() }
+        let first = MeetrailTests().meeting()
+        let older = try fixture.store.openNote(for: first)
+        _ = try fixture.store.saveDraft(id: older.id, text: "Earlier notes", reason: "Edit")
+        _ = try fixture.store.confirmContext(id: older.id, text: "Review scope")
+        let next = MeetrailTests().meeting(start: first.start.addingTimeInterval(86400))
+        let current = try fixture.store.openNote(for: next)
+        let model = fixture.container.detail(note: current, meeting: next)
+        model.updateText("Current draft")
+        model.toggleContext(); model.contextDraft = "Unconfirmed current context"
+        model.showHistoryAndContext()
+        #expect(fixture.actions.contextWindows == [current.id])
+        #expect(model.text == "Current draft" && model.contextDraft == "Unconfirmed current context")
+        #expect(try fixture.container.detail(id: current.id) === model)
+        model.selectHistory(older.id)
+        #expect(model.selectedHistory?.text == "Earlier notes")
+        #expect(model.canCarrySelectedHistory)
+        model.selectHistory(NoteID(rawValue: UUID()))
+        #expect(model.selectedHistoryID == older.id)
+        let earlierEditor = try fixture.container.detail(id: older.id)
+        earlierEditor.updateText("Updated earlier notes")
+        earlierEditor.contextDraft = "Updated confirmed scope"
+        earlierEditor.confirmContext()
+        #expect(model.selectedHistory?.text == "Updated earlier notes")
+        #expect(model.previous.first?.confirmedContext == "Updated confirmed scope")
+        #expect(model.contextDraft == "Unconfirmed current context")
+        model.carry(try #require(model.previous.first))
+        #expect(model.text.hasPrefix("Current draft"))
+        #expect(model.text.contains("Updated confirmed scope"))
+        model.selectHistory(current.id)
+        #expect(model.selectedHistory == nil)
+        model.confirmContext()
+        #expect(try fixture.store.fetchNote(id: current.id)?.confirmedContext == "Unconfirmed current context")
+        model.setCarryEnabled(false); #expect(model.previous.isEmpty)
+        model.setCarryEnabled(true); #expect(model.previous.count == 1)
+        #expect(!((try fixture.store.fetchRevisions(id: current.id)).isEmpty))
+    }
     @Test func recoveredMeetingsStayOnTheirDayAndHiddenCalendarsStayHidden() async throws {
         let fixture = try TestComposition(); defer { fixture.clearPreferences() }
         let now = Calendar.current.startOfDay(for: .now).addingTimeInterval(9 * 3600)

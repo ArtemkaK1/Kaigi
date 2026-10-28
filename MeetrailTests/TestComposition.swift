@@ -4,11 +4,13 @@ import Foundation
 @MainActor final class TestActions: ApplicationActions, LinkOpening, PermissionSettingsOpening {
     var opened: [URL] = []
     var floating: [NoteID] = []
+    var contextWindows: [NoteID] = []
     var exports: [MarkdownDocument] = []
     var accountWindows = 0
     var permissionSettings = 0
     func showAccounts() { accountWindows += 1 }
     func showFloatingNote(_ id: NoteID) { floating.append(id) }
+    func showMeetingContext(_ id: NoteID) { contextWindows.append(id) }
     func export(_ document: MarkdownDocument) async throws { exports.append(document) }
     func open(_ url: URL) throws { opened.append(url) }
     func openCalendarSettings() throws { permissionSettings += 1 }

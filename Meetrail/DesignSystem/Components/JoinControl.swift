@@ -24,7 +24,6 @@ struct JoinControl: View {
         }
         .buttonStyle(MeetrailButtonStyle(prominent: true, size: .conference))
         .controlSize(.small)
-        .appText(.caption, weight: .medium)
     }
 }
 struct SymbolButton: View {
@@ -37,7 +36,6 @@ struct SymbolButton: View {
             Image(systemName: symbol)
         }
         .buttonStyle(MeetrailButtonStyle(size: .icon, showsBorder: showsBorder))
-        .appText(.body, weight: .medium)
         .accessibilityLabel(label)
         .help(label)
     }
@@ -66,18 +64,19 @@ struct MeetrailButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .appText(AppTypography.buttonRole, weight: AppTypography.buttonWeight)
             .padding(.horizontal, size == .icon ? AppSpacing.none : AppSpacing.xs)
             .padding(.vertical, size == .icon ? AppSpacing.none : AppSpacing.xs)
             .frame(minWidth: size.width * scale, maxWidth: size.hasFixedWidth ? size.width * scale : nil, minHeight: size.height * scale)
             .foregroundStyle(enabled ? (prominent ? AppColors.onAccent : AppColors.accent) : AppColors.disabled)
             .background(prominent && enabled ? AppColors.accent : (configuration.isPressed ? AppColors.selected : AppColors.surface), in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
             .overlay {
-                    if showsBorder {
-                        RoundedRectangle(cornerRadius: AppLayout.cornerRadius)
-                            .strokeBorder(AppColors.border, lineWidth: 1)
-                            .allowsHitTesting(false)
-                    }
+                if showsBorder {
+                    RoundedRectangle(cornerRadius: AppLayout.cornerRadius)
+                        .strokeBorder(AppColors.border, lineWidth: 1)
+                        .allowsHitTesting(false)
                 }
+            }
             .contentShape(RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
             .opacity(configuration.isPressed ? 0.8 : 1)
     }

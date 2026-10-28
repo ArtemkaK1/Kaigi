@@ -33,6 +33,21 @@ extension DependencyContainer {
         #endif
         StartupTrace.mark("services.created")
         let store = try NoteRepository(inMemory: sample)
+        #if DEBUG
+        if sample && arguments.contains("--context-history") {
+            let fixtures = SampleCalendarGateway()
+            for offset in 1...3 {
+                let date = Calendar.current.date(byAdding: .day, value: -offset, to: .now)!
+                let day = Calendar.current.dateInterval(of: .day, for: date)!
+                if let meeting = try fixtures.meetings(in: day, calendarIDs: ["sample"]).first(where: { $0.externalID == "sample-2" }) {
+                    let note = try store.openNote(for: meeting)
+                    let paragraphs = offset == 2 ? 32 : 1
+                    _ = try store.saveDraft(id: note.id, text: String(repeating: "Synthetic planning notes: reviewed the draft and discussed scope. No owner or deadline was agreed.\n\n", count: paragraphs), reason: "Synthetic review fixture")
+                    _ = try store.confirmContext(id: note.id, text: String(repeating: "Review the draft at the next meeting. The scope question remains open.\n\n", count: offset == 2 ? 12 : 1))
+                }
+            }
+        }
+        #endif
         StartupTrace.mark("notes.created")
         return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, closeOnboarding: closeOnboarding)
     }

@@ -68,11 +68,9 @@ struct OnboardingView: View {
                     SymbolButton(symbol: "chevron.left", label: "Previous step", action: model.back)
                 }
                 Button("Skip for now", action: model.skip)
-                    .appText(.body)
                     .buttonStyle(MeetrailButtonStyle())
                 Spacer(minLength: AppSpacing.xs)
                 Button(model.stage == .ready ? "Open Meetrail" : "Continue", action: model.next)
-                    .appText(.body, weight: .semibold)
                     .buttonStyle(MeetrailButtonStyle(prominent: true))
                     .keyboardShortcut(.defaultAction)
             }
