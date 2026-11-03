@@ -21,8 +21,55 @@ import AppKit
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+    func testFreeControlsAndCompactEditorAcrossAppearances() throws {
+        for appearance in ["Aqua", "DarkAqua"] {
+            let app = launch(["--context-history", "-NSAppearance", appearance, "-AppleLocale", "en_US"])
+            let weekly = app.buttons["Open notes for Weekly planning"]
+            XCTAssertTrue(weekly.waitForExistence(timeout: 5))
+            XCTAssertFalse((weekly.value as? String ?? "").contains("previous confirmed context"))
+            XCTAssertTrue(app.buttons["Join Google Meet"].exists)
+            capture(app.popovers["Kaigi agenda"], "FeatureToggles free agenda \(appearance)")
+            app.buttons["Open notes for Product conversation"].click()
+            let editor = app.textViews["Meeting notes"]
+            XCTAssertTrue(editor.waitForExistence(timeout: 3))
+            for label in ["Clean Up", "Structure", "Revisions", "History & Context", "Float notes", "Apply"] {
+                XCTAssertFalse(app.buttons[label].exists, label)
+            }
+            XCTAssertFalse(app.staticTexts["On-device AI unavailable"].exists)
+            XCTAssertFalse(app.staticTexts["Review changes"].exists)
+            XCTAssertTrue(app.buttons["Export Markdown"].exists)
+            XCTAssertTrue(app.buttons["Join Google Meet"].exists)
+            editor.click(); editor.typeText("Synthetic free note")
+            XCTAssertTrue(app.staticTexts["Saved locally"].exists)
+            let panel = app.popovers["Kaigi agenda"]
+            XCTAssertLessThan(panel.frame.height, 400)
+            XCTAssertLessThan(panel.frame.maxY - app.staticTexts["Saved locally"].frame.maxY, 40, "No empty advanced-controls region")
+            capture(panel, "FeatureToggles free editor \(appearance)")
+            app.typeKey("[", modifierFlags: .command)
+            app.buttons["Open notes for Product conversation"].click()
+            XCTAssertEqual(editor.value as? String, "Synthetic free note")
+            app.typeKey(",", modifierFlags: .command)
+            XCTAssertTrue(app.buttons["Accounts & Calendars"].waitForExistence(timeout: 3))
+            XCTAssertFalse(app.checkBoxes["On-device AI"].exists)
+            XCTAssertTrue(app.checkBoxes["Remind me 5 minutes before meetings"].exists)
+            XCTAssertTrue(app.checkBoxes["Launch at login"].exists)
+            capture(app.windows.firstMatch, "FeatureToggles free settings \(appearance)")
+            app.terminate()
+        }
+    }
+    func testAllEnabledControlsRemainAvailable() throws {
+        let app = launch(["--all-features", "--context-history", "--mock-ai"])
+        let weekly = app.buttons["Open notes for Weekly planning"]
+        XCTAssertTrue((weekly.value as? String ?? "").contains("previous confirmed context"))
+        weekly.click()
+        for label in ["Clean Up", "Structure", "Revisions", "History & Context", "Float notes", "Export Markdown"] {
+            XCTAssertTrue(app.buttons[label].exists, label)
+        }
+        capture(app.popovers["Kaigi agenda"], "FeatureToggles all-enabled editor")
+        app.terminate()
+    }
     func testDayNavigationSelectionAndFloatingEditor() throws {
-        let app = launch()
+        let app = launch(["--all-features"])
         let next = app.buttons["Next day"]
         XCTAssertTrue(next.waitForExistence(timeout: 8))
         next.click()
@@ -52,7 +99,7 @@ import AppKit
         app.terminate()
     }
     func testKeyboardNavigationAndMeetingHistory() throws {
-        let app = launch()
+        let app = launch(["--all-features"])
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
         app.typeKey(.rightArrow, modifierFlags: .command)
         app.typeKey("t", modifierFlags: .command)
@@ -73,7 +120,7 @@ import AppKit
     }
     func testContextWindowCarryConfirmationAndSharedEarlierEditor() throws {
         for appearance in ["Aqua", "DarkAqua"] {
-            let app = launch(["--context-history", "-NSAppearance", appearance, "-AppleLocale", "en_US"])
+            let app = launch(["--all-features", "--context-history", "-NSAppearance", appearance, "-AppleLocale", "en_US"])
             app.buttons["Open notes for Weekly planning"].click()
             let editor = app.textViews["Meeting notes"]
             XCTAssertTrue(editor.waitForExistence(timeout: 3))
@@ -284,7 +331,7 @@ import AppKit
         }
     }
     func testStatusContextMenuSettingsAndQuit() throws {
-        let app = launch()
+        let app = launch(["--all-features"])
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
         app.statusItems.firstMatch.rightClick()
         XCTAssertTrue(app.statusItems.firstMatch.menuItems["Settings…"].waitForExistence(timeout: 3))
@@ -298,7 +345,7 @@ import AppKit
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 3))
     }
     func testAIReviewCancelApplyAndDisabledSetting() throws {
-        let app = launch(["--mock-ai"])
+        let app = launch(["--all-features", "--mock-ai"])
         app.buttons["Open notes for Product conversation"].click()
         let editor = app.textViews["Meeting notes"]
         XCTAssertTrue(editor.waitForExistence(timeout: 3))
@@ -385,7 +432,7 @@ import AppKit
         denied.terminate()
     }
     func testAIReviewErrorDoesNotOfferSaveRetryForSavedNotes() throws {
-        let app = launch(["--mock-ai"])
+        let app = launch(["--all-features", "--mock-ai"])
         app.buttons["Open notes for Product conversation"].click()
         let editor = app.textViews["Meeting notes"]
         XCTAssertTrue(editor.waitForExistence(timeout: 3))

@@ -8,9 +8,10 @@ import Foundation
     func save(_ id: NoteID, text: String, reason: String = "Edit") throws -> NoteRecord { try store.saveDraft(id: id, text: text, reason: reason) }
     func revisions(_ id: NoteID) throws -> [RevisionRecord] { try store.fetchRevisions(id: id) }
     func restore(_ revision: RevisionRecord) throws -> NoteRecord { try save(revision.noteID, text: revision.text, reason: "Restore revision") }
-    func document(_ id: NoteID, draft: String? = nil) throws -> MarkdownDocument {
+    func document(_ id: NoteID, draft: String? = nil, includeContext: Bool = true) throws -> MarkdownDocument {
         let note = try note(id)
-        return MarkdownDocument(text: "# \(note.title)\n\n\(note.start.formatted(date: .complete, time: .shortened))\n\n\(draft ?? note.text)\n\n## Confirmed context\n\n\(note.confirmedContext)\n", filename: "Kaigi-note.md")
+        let context = includeContext ? "\n\n## Confirmed context\n\n\(note.confirmedContext)\n" : "\n"
+        return MarkdownDocument(text: "# \(note.title)\n\n\(note.start.formatted(date: .complete, time: .shortened))\n\n\(draft ?? note.text)\(context)", filename: "Kaigi-note.md")
     }
     func badges(for meetings: [Meeting]) throws -> NoteBadges {
         let notes = try store.fetchNotes()
@@ -60,12 +61,13 @@ struct AgendaResult: Sendable { let meetings: [Meeting]; let recovered: [NoteRec
     let notes: NoteUseCases
     let preferences: any PreferencesService
     let sample: Bool
+    var features: FeatureToggles = .appStoreFree
     func load(day: DateInterval) async throws -> AgendaResult {
         await coordinator.prepare()
         try Task.checkCancellation()
         visibility.initializeIfNeeded()
         let events = try await coordinator.events(in: day, visibleCalendarIDs: visibility.effectiveIDs)
-        if preferences.remindersEnabled && !sample {
+        if features.isEnabled(.meetingReminders) && preferences.remindersEnabled && !sample {
             let now = Date.now
             let upcoming = try await coordinator.events(in: DateInterval(start: now, duration: 7 * 86400), visibleCalendarIDs: visibility.effectiveIDs)
             guard !Task.isCancelled else { throw CancellationError() }

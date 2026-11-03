@@ -28,3 +28,7 @@ Run `python3 Tools/verify-architecture.py`, appropriate unit/UI tests, Debug and
 ## Kaigi identity compatibility
 
 App/project/targets/scheme/executable use Kaigi and bundle ID `com.volrik.kaigi`, team `WX557M9HD2`. Keep the legacy Swift module name `Meetrail` and `@testable import Meetrail` for SwiftData compatibility. Do not rename persisted models or default.store. See Docs/DataMigration.md for owner-mediated transfer; never read or alter an old sandbox automatically. App Store Connect listing name is `Kaigi - Meeting Notes`; installed display name is `Kaigi`.
+
+## Feature availability
+
+Inject immutable `FeatureToggles` through App composition; normal launches and Release use `.appStoreFree`. Views render ViewModel availability, and ViewModels/actions/window routes must also guard disabled operations. Do not disable internal note revisions or alter saved context/preferences when hiding UI. Advanced tests explicitly inject `.allEnabled`; Debug launch overrides require synthetic `--sample` sessions. Never persist toggles or add remote/payment activation. See Docs/FeatureToggles.md and run `python3 Tools/test-feature-toggles-release.py` when changing selection logic.

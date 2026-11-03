@@ -7,25 +7,35 @@ struct SettingsView: View {
             Text("Settings")
                 .appText(.section, weight: .semibold)
                 .accessibilityAddTraits(.isHeader)
-            Button(action: model.showAccounts) {
-                HStack(spacing: AppSpacing.xs) {
-                    Label("Accounts & Calendars", systemImage: "calendar");
-                    Spacer(minLength: AppSpacing.xs);
-                    Image(systemName: "chevron.right")
+            if model.features.isEnabled(.calendarManagement) {
+                Button(action: model.showAccounts) {
+                    HStack(spacing: AppSpacing.xs) {
+                        Label("Accounts & Calendars", systemImage: "calendar");
+                        Spacer(minLength: AppSpacing.xs);
+                        Image(systemName: "chevron.right")
+                    }
                 }
+                .buttonStyle(KaigiButtonStyle(.tertiary))
             }
-            .buttonStyle(KaigiButtonStyle(.tertiary))
-            Divider()
-                .overlay(AppColors.border)
-            Toggle("On-device AI", isOn: Binding(get: { model.aiEnabled }, set: model.setAIEnabled))
-                .appText(.body)
-                .tint(AppColors.accentFill)
-            Toggle("Remind me 5 minutes before meetings", isOn: Binding(get: { model.remindersEnabled }, set: model.setReminders))
-                .appText(.body)
-                .tint(AppColors.accentFill)
-            Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: model.setLaunchAtLogin))
-                .appText(.body)
-                .tint(AppColors.accentFill)
+            if model.features.isEnabled(.calendarManagement) && (model.hasAI || model.features.isEnabled(.meetingReminders) || model.features.isEnabled(.launchAtLogin)) {
+                Divider()
+                    .overlay(AppColors.border)
+            }
+            if model.hasAI {
+                Toggle("On-device AI", isOn: Binding(get: { model.aiEnabled }, set: model.setAIEnabled))
+                    .appText(.body)
+                    .tint(AppColors.accentFill)
+            }
+            if model.features.isEnabled(.meetingReminders) {
+                Toggle("Remind me 5 minutes before meetings", isOn: Binding(get: { model.remindersEnabled }, set: model.setReminders))
+                    .appText(.body)
+                    .tint(AppColors.accentFill)
+            }
+            if model.features.isEnabled(.launchAtLogin) {
+                Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: model.setLaunchAtLogin))
+                    .appText(.body)
+                    .tint(AppColors.accentFill)
+            }
             if let message = model.message {
                 InlineMessage(text: message)
             }

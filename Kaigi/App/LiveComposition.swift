@@ -50,7 +50,7 @@ extension DependencyContainer {
         }
         #endif
         StartupTrace.mark("notes.created")
-        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, closeOnboarding: closeOnboarding)
+        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, features: .forLaunch(arguments: ProcessInfo.processInfo.arguments), closeOnboarding: closeOnboarding)
     }
 }
 #if DEBUG

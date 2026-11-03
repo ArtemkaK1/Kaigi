@@ -167,7 +167,7 @@ import Foundation
         }
     }
     @Test func aiPreviewPreservesOriginalAndRejectsStaleApplication() async throws {
-        let fixture = try TestComposition(ai: MockAIRefinementService(result: "Reviewed result")); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(ai: MockAIRefinementService(result: "Reviewed result"), features: .allEnabled); defer { fixture.clearPreferences() }
         let record = try fixture.store.openNote(for: KaigiTests().meeting())
         let model = fixture.container.detail(note: record, meeting: nil)
         model.updateText("Rough original")
@@ -183,7 +183,7 @@ import Foundation
         #expect(try fixture.store.fetchNote(id: record.id)?.confirmedContext == "")
     }
     @Test func floatingAndAgendaEditorsShareTheSamePresentationState() throws {
-        let fixture = try TestComposition(); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(features: .allEnabled); defer { fixture.clearPreferences() }
         let note = try fixture.store.openNote(for: KaigiTests().meeting())
         let agendaDetail = fixture.container.detail(note: note, meeting: nil)
         let floating = try fixture.container.detail(id: note.id)

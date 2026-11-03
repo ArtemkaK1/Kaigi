@@ -5,15 +5,19 @@ struct NoteEditorView: View {
     var back: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            HStack(spacing: AppSpacing.xs) {
-                if let back {
-                    SymbolButton(symbol: "chevron.left", label: "Back to agenda", action: back)
-                        .keyboardShortcut("[", modifiers: .command)
-                }
-                Spacer(minLength: AppSpacing.xs)
-                SymbolButton(symbol: "square.and.arrow.up", label: "Export Markdown", action: model.export)
-                if back != nil {
-                    SymbolButton(symbol: "pin", label: "Float notes", action: model.float)
+            if back != nil || model.features.isEnabled(.markdownExport) {
+                HStack(spacing: AppSpacing.xs) {
+                    if let back {
+                        SymbolButton(symbol: "chevron.left", label: "Back to agenda", action: back)
+                            .keyboardShortcut("[", modifiers: .command)
+                    }
+                    Spacer(minLength: AppSpacing.xs)
+                    if model.features.isEnabled(.markdownExport) {
+                        SymbolButton(symbol: "square.and.arrow.up", label: "Export Markdown", action: model.export)
+                    }
+                    if back != nil && model.features.isEnabled(.floatingNotes) {
+                        SymbolButton(symbol: "pin", label: "Float notes", action: model.float)
+                    }
                 }
             }
             Text(model.note.title)
@@ -54,9 +58,11 @@ struct NoteEditorView: View {
                 Text(model.saveStatus)
                     .appText(.caption)
                     .foregroundStyle(model.saveStatus == "Saved locally" ? AppColors.secondary : AppColors.error)
-                Spacer(minLength: AppSpacing.xs)
-                Button("Revisions", action: model.toggleRevisions)
-                    .buttonStyle(KaigiButtonStyle(.tertiary))
+                if model.features.isEnabled(.revisionHistoryUI) {
+                    Spacer(minLength: AppSpacing.xs)
+                    Button("Revisions", action: model.toggleRevisions)
+                        .buttonStyle(KaigiButtonStyle(.tertiary))
+                }
             }
             if let error = model.error {
                 InlineMessage(text: error, isError: true)
@@ -69,7 +75,7 @@ struct NoteEditorView: View {
                 .appText(.caption)
                 .buttonStyle(KaigiButtonStyle())
             }
-            if model.showingRevisions {
+            if model.features.isEnabled(.revisionHistoryUI) && model.showingRevisions {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     if model.revisions.isEmpty {
                         Text("No revisions yet")
@@ -86,58 +92,66 @@ struct NoteEditorView: View {
                 .appText(.caption)
                 .buttonStyle(KaigiButtonStyle())
             }
-            HStack(spacing: AppSpacing.xs) {
-                Button("Clean Up") {
-                    model.refine(.cleanUp)
-                }
-                .help("Improve spelling and clarity in this note; review before applying")
-                Button("Structure") {
-                    model.refine(.structure)
-                }
-                .help("Organize this note into topics, decisions, actions and questions; review before applying")
-                if model.refining {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-            .disabled(!model.canRefine)
-            .appText(.body, weight: .medium)
-            .buttonStyle(KaigiButtonStyle())
-            if let reason = model.unavailableReason {
-                Text(model.aiEnabled ? "On-device AI unavailable" : reason)
-                    .appText(.caption)
-                    .foregroundStyle(AppColors.secondary)
-                    .help(reason)
-            }
-            if let preview = model.preview {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Label("Review changes", systemImage: "sparkles")
-                        .appText(.body, weight: .medium)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(preview.text)
-                        .appText(.body)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                        .accessibilityIdentifier("ai-proposed-note")
-                    HStack(spacing: AppSpacing.xs) {
-                        Button("Cancel", action: model.discardPreview)
-                            .buttonStyle(KaigiButtonStyle(.tertiary))
-                            .keyboardShortcut(.cancelAction)
-                        Spacer(minLength: AppSpacing.xs)
-                        Button("Apply", action: model.applyPreview)
-                            .buttonStyle(KaigiButtonStyle(.primary))
+            if model.hasAI {
+                HStack(spacing: AppSpacing.xs) {
+                    if model.features.isEnabled(.aiCleanUp) {
+                        Button("Clean Up") {
+                            model.refine(.cleanUp)
+                        }
+                        .help("Improve spelling and clarity in this note; review before applying")
                     }
-                    .appText(.body, weight: .medium)
+                    if model.features.isEnabled(.aiStructure) {
+                        Button("Structure") {
+                            model.refine(.structure)
+                        }
+                        .help("Organize this note into topics, decisions, actions and questions; review before applying")
+                    }
+                    if model.refining {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
                 }
-                .padding(AppSpacing.sm)
-                .background(AppColors.selected, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
+                .disabled(!model.canRefine)
+                .appText(.body, weight: .medium)
+                .buttonStyle(KaigiButtonStyle())
+                if let reason = model.unavailableReason {
+                    Text(model.aiEnabled ? "On-device AI unavailable" : reason)
+                        .appText(.caption)
+                        .foregroundStyle(AppColors.secondary)
+                        .help(reason)
+                }
+                if let preview = model.preview {
+                    VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                        Label("Review changes", systemImage: "sparkles")
+                            .appText(.body, weight: .medium)
+                            .accessibilityAddTraits(.isHeader)
+                        Text(preview.text)
+                            .appText(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                            .accessibilityIdentifier("ai-proposed-note")
+                        HStack(spacing: AppSpacing.xs) {
+                            Button("Cancel", action: model.discardPreview)
+                                .buttonStyle(KaigiButtonStyle(.tertiary))
+                                .keyboardShortcut(.cancelAction)
+                            Spacer(minLength: AppSpacing.xs)
+                            Button("Apply", action: model.applyPreview)
+                                .buttonStyle(KaigiButtonStyle(.primary))
+                        }
+                        .appText(.body, weight: .medium)
+                    }
+                    .padding(AppSpacing.sm)
+                    .background(AppColors.selected, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
+                }
             }
-            Button(action: model.showHistoryAndContext) {
-                Label("History & Context", systemImage: "clock.arrow.circlepath")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if model.hasHistoryAndContext {
+                Button(action: model.showHistoryAndContext) {
+                    Label("History & Context", systemImage: "clock.arrow.circlepath")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(KaigiButtonStyle(.tertiary))
+                .accessibilityHint("Opens meeting history and confirmed context in a separate window")
             }
-            .buttonStyle(KaigiButtonStyle(.tertiary))
-            .accessibilityHint("Opens meeting history and confirmed context in a separate window")
         }
         .padding(AppSpacing.sm)
         .background(AppColors.background)

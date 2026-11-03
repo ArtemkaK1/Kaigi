@@ -9,11 +9,12 @@ import SwiftUI
 @MainActor final class AppRouter: ApplicationActions {
     weak var windows: AppWindowCoordinator?
     private let exporter: MarkdownExporter
-    init(exporter: MarkdownExporter) { self.exporter = exporter }
-    func showAccounts() { windows?.showAccounts() }
-    func showFloatingNote(_ id: NoteID) { windows?.showFloatingNote(id) }
-    func showMeetingContext(_ id: NoteID) { windows?.showMeetingContext(id) }
-    func export(_ document: MarkdownDocument) async throws { try await exporter.export(document) }
+    private let features: FeatureToggles
+    init(exporter: MarkdownExporter, features: FeatureToggles) { self.exporter = exporter; self.features = features }
+    func showAccounts() { guard features.isEnabled(.calendarManagement) else { return }; windows?.showAccounts() }
+    func showFloatingNote(_ id: NoteID) { guard features.isEnabled(.floatingNotes) else { return }; windows?.showFloatingNote(id) }
+    func showMeetingContext(_ id: NoteID) { guard features.isEnabled(.meetingHistory) || features.isEnabled(.recurringContext) else { return }; windows?.showMeetingContext(id) }
+    func export(_ document: MarkdownDocument) async throws { guard features.isEnabled(.markdownExport) else { return }; try await exporter.export(document) }
     func dismissOnboarding() { windows?.closeOnboarding() }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -27,7 +28,7 @@ import SwiftUI
         // Settings scene content is constructed before didFinishLaunching. Resolve
         // its injected ViewModel first, without creating windows or requesting access.
         do {
-            let router = AppRouter(exporter: MarkdownExporter()); self.router = router
+            let router = AppRouter(exporter: MarkdownExporter(), features: .forLaunch(arguments: ProcessInfo.processInfo.arguments)); self.router = router
             container = try DependencyContainer.makeLive(actions: router, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
         } catch { startupFailure = error }
         StartupTrace.mark("delegate.end")
@@ -166,6 +167,7 @@ import SwiftUI
         agendaPopover.contentSize = NSSize(width: AppLayout.panelWidth, height: height)
     }
     func showAccounts() {
+        guard container.features.isEnabled(.calendarManagement) else { return }
         closeAgenda(); container.accounts.refresh()
         if accountsWindow == nil {
             accountsWindow = makeWindow(title: "Accounts & Calendars", root: CalendarAccountsView(model: container.accounts))
@@ -206,6 +208,7 @@ import SwiftUI
         window.setContentSize(NSSize(width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight)); window.center(); return window
     }
     func showMeetingContext(_ id: NoteID) {
+        guard container.features.isEnabled(.meetingHistory) || container.features.isEnabled(.recurringContext) else { return }
         do {
             let detail = try container.detail(id: id)
             detail.reloadContext()
@@ -222,6 +225,7 @@ import SwiftUI
         } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
     }
     func showFloatingNote(_ id: NoteID) {
+        guard container.features.isEnabled(.floatingNotes) else { return }
         do {
             if let panel = floatingPanels[id] { NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil); return }
             let detail = try container.detail(id: id)

@@ -88,7 +88,7 @@ struct AgendaView: View {
                     Text(model.connection == .connected ? "No meetings for this day." : "Choose calendars to see your meetings.")
                         .appText(.body)
                         .foregroundStyle(AppColors.secondary)
-                    if model.connection != .connected {
+                    if model.connection != .connected && model.features.isEnabled(.calendarManagement) {
                         Button("Connect calendars", action: model.connect)
                             .buttonStyle(KaigiButtonStyle(.primary))
                     }
@@ -130,7 +130,7 @@ struct AgendaView: View {
                         .modifier(MeetingCardSurface())
                     }
                 }
-                if model.connection != .connected {
+                if model.connection != .connected && model.features.isEnabled(.calendarManagement) {
                     Button("Connect calendars", action: model.connect)
                         .buttonStyle(KaigiButtonStyle())
                 }
