@@ -61,13 +61,35 @@ The first UI attempt timed out awaiting macOS Enable UI Automation authenticatio
 
 ## Accounts & Calendars UI validation — 4 November 2026
 
-The accounts window uses a compact horizontal selector with one persistent purple indicator, animated only along its horizontal offset with a 0.25-second spring (bounce 0.1). Reduce Motion removes this movement. Native buttons retain selection announcements, focus feedback, and arrow-key navigation. Account disclosure indicators remain native; the label's hit region includes the title, count and intervening space. Group actions use the existing tertiary style with regular labels. The ViewModel and calendar/data services are unchanged, and onboarding retains its existing presentation.
+The accounts window uses a compact horizontal selector with one persistent purple indicator, animated only along its horizontal offset with a 0.25-second spring (bounce 0.1). Reduce Motion removes this movement. Native buttons retain selection announcements, focus feedback, and arrow-key navigation. Account disclosure indicators remain native; the label's hit region includes the title, count and intervening space. Group selection now uses a native mixed-state All checkbox with a regular label; its row preserves the previous bulk-action height. The ViewModel and calendar/data services are unchanged, and onboarding retains its existing presentation.
 
-Only two authored vertical gaps change: heading-to-search **8 → 16 pt**, and search-to-list **8 → 16 pt**. The selector-to-section gap remains 16 pt; card-to-card spacing, card padding, expanded-content top padding, action-to-row spacing, row spacing and button internal padding remain 8 pt. The rendered selector remains 248 × 24 pt at default text size, action buttons remain 32 pt tall, and the search field's accessibility bounds remain 26 pt tall. Expanded content gains only a horizontal inset matching the measured native disclosure-title geometry (11.5 pt on this Mac at default text size); this is intrinsic alignment, not a new authored spacing value. Regular button text slightly reduces intrinsic button widths without changing padding or heights.
+Only two authored vertical gaps change: heading-to-search **8 → 16 pt**, and search-to-list **8 → 16 pt**. The selector-to-section gap remains 16 pt; card-to-card spacing, card padding, expanded-content top padding, action-to-row spacing, row spacing and button internal padding remain 8 pt. The rendered selector remains 248 × 24 pt at default text size, the bulk-selection row remains 32 pt tall, and the search field's accessibility bounds remain 26 pt tall. Expanded content gains only a horizontal inset matching the measured native disclosure-title geometry (11.5 pt on this Mac at default text size); this is intrinsic alignment, not a new authored spacing value. Regular button text slightly reduces intrinsic button widths without changing padding or heights.
 
 On macOS 26.6.2 / Xcode 27, signed Debug and Release builds, normal-keychain signature checks, all 52 synthetic unit tests, architecture verification, the Release feature-selector probe and `git diff --check` passed. Synthetic UI checks cover Light/Dark appearances, expanded/collapsed groups, title alignment, geometry invariants, whole-header clicks, checkbox and whole-account actions during filtering, hover feedback, keyboard navigation, enlarged text, provider cards and onboarding. Before/after screenshots and a cropped recording of the actual sliding indicator remain outside Git. No live calendar permission, production-store or external-service validation was performed.
 
 The existing native Settings Command-comma UI test fails to open Settings on both the untouched baseline and the refined UI in this session; the status-menu Settings route passes. A broader UI run was interrupted after additional AI review, context text-entry, agenda and event-synthesis failures, so a full-suite pass is not claimed. Those tests were not removed or converted to skips. Spoken VoiceOver and macOS 15 runtime testing remain outstanding. Restricted-shell signing/trust checks required authorized runs with access to the existing development identity; no identities were created or revoked.
+
+## Marketing sample profile and bulk selection
+
+Expanded accounts expose one native **All** checkbox. Unchecked and mixed states select the whole account; checked deselects it. Its state uses the complete account catalog, including rows hidden by search. The existing visibility use case still preserves intentionally empty selections and temporarily missing IDs. The native AppKit checkbox supplies its checked/mixed/unchecked accessibility state, an account-specific label and Space activation. It keeps the former 32 pt bulk-action row at default text size; card padding, card gaps and individual calendar row spacing are unchanged.
+
+Build and run an isolated Debug capture session:
+
+```sh
+xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -configuration Debug \
+  -derivedDataPath /tmp/kaigi-bulk-derived build
+open -n /tmp/kaigi-bulk-derived/Build/Products/Debug/Kaigi.app --args \
+  --sample --show-agenda --marketing-fixtures --test-session "$(uuidgen)" \
+  -NSAppearance Aqua
+```
+
+Use `DarkAqua` for Dark Mode. Omitting `--test-session` creates a fresh random isolated session automatically; reusing an explicit identifier preserves that session's selection preferences. Notes remain in memory. No calendar permission is requested and no production store or EventKit calendars are written.
+
+`--marketing-fixtures` is accepted only with `--sample` in Debug. It provides fictitious system-calendar groupings: **Work Account** (Work, Team Meetings, Project Reviews), **Personal Account** (Personal, Family, Birthdays), and **Subscribed Calendars** (Holidays, Travel). All eight calendars have distinct deterministic provider colors. Existing meeting occurrence IDs and conference links are retained, with the existing `sample` calendar presented as Work. The profile never implies direct third-party account integration, persists no fixture names or profile flag, and always uses `.appStoreFree`, even when combined with `--all-features`.
+
+Normal `--sample` names and IDs are unchanged. If `--fifty-calendars` is also specified, the existing 50-calendar scale fixture takes precedence. Release compiles out the marketing factory and launch handling; marketing arguments cannot select synthetic providers in Release. Synthetic UI captures are validation screenshots only; no App Store artwork or website assets are generated by this workflow.
+
+Validation on macOS 26.6.2 / Xcode 27 covers 60 synthetic unit tests and seven focused UI tests across selected runs: checkbox states/transitions, unfiltered bulk semantics, missing/unavailable IDs, empty-selection persistence, isolated automatic/explicit sessions, notes, Join dispatch, Light/Dark captures, normal and 50-calendar profiles, enlarged text, selector keyboard behavior and onboarding. Signed Debug/Release builds, signature verification, architecture checks, Release-selector compilation, absence of marketing flags/names in the Release executable, and `git diff --check` pass. Join dispatch is checked through an injected opener; no external conference was opened. Native accessibility role, account label, mixed value and Space activation are automated; spoken VoiceOver and macOS 15 runtime validation were not performed. Production stores, real EventKit calendars, and external services were not exercised.
 
 ## License and contribution rights
 

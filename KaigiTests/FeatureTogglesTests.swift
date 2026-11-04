@@ -18,6 +18,9 @@ import Testing
         #expect(FeatureToggles.forLaunch(arguments: []) == .appStoreFree)
         #expect(FeatureToggles.forLaunch(arguments: ["--all-features"]) == .appStoreFree)
         #expect(FeatureToggles.forLaunch(arguments: ["--sample"]) == .appStoreFree)
+        #expect(FeatureToggles.forLaunch(arguments: ["--marketing-fixtures"]) == .appStoreFree)
+        #expect(FeatureToggles.forLaunch(arguments: ["--sample", "--marketing-fixtures"]) == .appStoreFree)
+        #expect(FeatureToggles.forLaunch(arguments: ["--sample", "--marketing-fixtures", "--all-features"]) == .appStoreFree)
         #if DEBUG
         #expect(FeatureToggles.forLaunch(arguments: ["--sample", "--all-features"]) == .allEnabled)
         #else

@@ -15,8 +15,7 @@ extension DependencyContainer {
             defaults = UserDefaults(suiteName: "com.volrik.kaigi.qa.\(session)")!
         } else { defaults = .standard }
         let provider: any CalendarProvider
-        if sample {
-            let fixture = SampleCalendarGateway(empty: arguments.contains("--empty"), meetingCount: arguments.contains("--fifteen-meetings") ? 15 : arguments.contains("--one-meeting") ? 1 : 3, calendarCount: arguments.contains("--fifty-calendars") ? 50 : 1, longTitles: arguments.contains("--long-titles"))
+        if let fixture = SampleCalendarGateway.forLaunch(arguments: arguments) {
             if firstRun && !arguments.contains("--connected") { fixture.access = .unknown }
             if arguments.contains("--denied-calendar") { fixture.access = .denied }
             provider = fixture

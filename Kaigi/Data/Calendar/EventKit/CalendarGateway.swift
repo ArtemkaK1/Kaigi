@@ -17,6 +17,9 @@ nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, de
     let longTitles: Bool
     var access = CalendarAccess.allowed
     var calendars: [CalendarChoice]
+    #if DEBUG
+    var usesMarketingFixtures = false
+    #endif
     var onChange: (() -> Void)?
     var kind: CalendarProviderKind { .system }
     var connectionState: AccountConnectionState { access == .allowed ? .connected : access == .denied ? .permissionDenied : .notConnected }
@@ -28,6 +31,9 @@ nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, de
     func connect() async throws { try await requestAccess() }
     func catalog() -> CalendarCatalog {
         guard access == .allowed else { return .empty }
+        #if DEBUG
+        if usesMarketingFixtures { return Self.marketingCatalog }
+        #endif
         let count = max(1, (calendars.count + 9) / 10)
         let accounts = (0..<count).map { CalendarAccount(id: AccountID(rawValue: "sample-account-\($0)"), provider: .system, name: "Sample account \($0 + 1)", state: .connected) }
         let descriptors = calendars.enumerated().map { index, calendar in
@@ -41,12 +47,16 @@ nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, de
     }
     func meetings(in interval: DateInterval, calendarIDs: Set<String>) throws -> [Meeting] {
         guard !empty, access == .allowed, calendarIDs.contains("sample") else { return [] }
+        var calendarName = "Sample calendar"
+        #if DEBUG
+        if usesMarketingFixtures { calendarName = "Work" }
+        #endif
         let base = [(9, "Product conversation", "https://meet.google.com/aaa-bbbb-ccc"), (11, "Design review", "https://example.invalid/meeting"), (14, "Weekly planning", "")]
         return (0..<meetingCount).map { index in
             let entry = index < base.count ? base[index] : (9 + index / 2, "Working session \(index + 1)", "")
             let start = Calendar.current.date(bySettingHour: min(entry.0, 23), minute: index < 3 ? 0 : (index % 2) * 30, second: 0, of: interval.start)!
             let title = longTitles ? entry.1 + " — extended synthetic agenda title for accessibility and compact layout review" : entry.1
-            return Meeting(calendarID: "sample", calendarName: "Sample calendar", externalID: "sample-\(index)", eventID: "sample-\(index)", title: title, start: start, end: start.addingTimeInterval(1800), originalStart: start, recurring: index == 2, allDay: false, links: URL(string: entry.2).map { [MeetingLink(url: $0, provider: index == 0 ? "Google Meet" : "Web link", recognized: index == 0)] } ?? [])
+            return Meeting(calendarID: "sample", calendarName: calendarName, externalID: "sample-\(index)", eventID: "sample-\(index)", title: title, start: start, end: start.addingTimeInterval(1800), originalStart: start, recurring: index == 2, allDay: false, links: URL(string: entry.2).map { [MeetingLink(url: $0, provider: index == 0 ? "Google Meet" : "Web link", recognized: index == 0)] } ?? [])
         }
     }
 }

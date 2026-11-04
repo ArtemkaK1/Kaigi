@@ -10,7 +10,9 @@ with tempfile.TemporaryDirectory(prefix="kaigi-release-toggles-") as folder:
     main = temporary / "main.swift"
     main.write_text('''
 let arguments: [[String]] = [[], ["--all-features"], ["--sample"],
-    ["--sample", "--all-features", "--context-history", "--mock-ai"]]
+    ["--sample", "--all-features", "--context-history", "--mock-ai"],
+    ["--marketing-fixtures"], ["--sample", "--marketing-fixtures"],
+    ["--sample", "--marketing-fixtures", "--all-features"]]
 for value in arguments {
     precondition(FeatureToggles.forLaunch(arguments: value) == .appStoreFree)
 }

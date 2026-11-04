@@ -8,7 +8,10 @@ struct CalendarGroupState: Identifiable {
     let account: CalendarAccount
     let calendars: [CalendarDescriptor]
     let selectedCount: Int
+    let calendarCount: Int
     let expanded: Bool
+    var allSelected: Bool { calendarCount > 0 && selectedCount == calendarCount }
+    var partiallySelected: Bool { selectedCount > 0 && selectedCount < calendarCount }
 }
 struct ProviderCardState: Identifiable {
     var id: CalendarProviderKind { kind }
@@ -46,7 +49,7 @@ struct ProviderCardState: Identifiable {
             let all = catalog.calendars.filter { $0.accountID == account.id }
             let filtered = all.filter { search.isEmpty || $0.name.localizedStandardContains(search) || account.name.localizedStandardContains(search) }
             guard !filtered.isEmpty else { return nil }
-            return CalendarGroupState(account: account, calendars: filtered, selectedCount: all.filter { selectedIDs.contains($0.id) }.count, expanded: !search.isEmpty || expanded.contains(account.id))
+            return CalendarGroupState(account: account, calendars: filtered, selectedCount: all.filter { selectedIDs.contains($0.id) }.count, calendarCount: all.count, expanded: !search.isEmpty || expanded.contains(account.id))
         }
     }
     var selectedCount: Int { visibility.effectiveIDs.count }

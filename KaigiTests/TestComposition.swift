@@ -24,14 +24,14 @@ import Foundation
     let system = PreviewPreferencesService()
     let actions = TestActions()
     let container: DependencyContainer
-    init(calendars: Int = 1, meetings: Int = 3, firstRun: Bool = false, legacyIDs: [String]? = nil, store: NoteRepository? = nil, ai: (any AIRefinementService)? = nil, features: FeatureToggles = .appStoreFree) throws {
+    init(calendars: Int = 1, meetings: Int = 3, firstRun: Bool = false, legacyIDs: [String]? = nil, store: NoteRepository? = nil, ai: (any AIRefinementService)? = nil, features: FeatureToggles = .appStoreFree, provider: SampleCalendarGateway? = nil) throws {
         suite = "kaigi.test.\(UUID().uuidString)"; defaults = UserDefaults(suiteName: suite)!
         if let legacyIDs { defaults.set(legacyIDs, forKey: "selectedCalendars") }
         preferences = AppPreferencesStore(defaults: defaults)
-        provider = SampleCalendarGateway(meetingCount: meetings, calendarCount: calendars)
-        if firstRun { provider.access = .unknown }
+        self.provider = provider ?? SampleCalendarGateway(meetingCount: meetings, calendarCount: calendars)
+        if firstRun { self.provider.access = .unknown }
         self.store = try store ?? NoteRepository(inMemory: true)
-        container = try DependencyContainer(providers: [provider], store: self.store, preferences: preferences, systemPreferences: system, ai: ai ?? UnavailableAIService(), opener: actions, permissionSettings: actions, actions: actions, sample: true, suppressOnboarding: !firstRun, features: features, closeOnboarding: {})
+        container = try DependencyContainer(providers: [self.provider], store: self.store, preferences: preferences, systemPreferences: system, ai: ai ?? UnavailableAIService(), opener: actions, permissionSettings: actions, actions: actions, sample: true, suppressOnboarding: !firstRun, features: features, closeOnboarding: {})
     }
     func clearPreferences() { defaults.removePersistentDomain(forName: suite) }
 }

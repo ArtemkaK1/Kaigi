@@ -105,6 +105,8 @@ struct ProviderConnectionsView: View {
 }
 struct CalendarSelectionView: View {
     @Bindable var model: CalendarAccountsViewModel
+    @Environment(\.dynamicTypeSize) private var textSize
+    @ScaledMetric(relativeTo: .body) private var bulkRowHeight = AppButtonSize.regular.height
     @State private var nativeTitleInsets: [AccountID: CGFloat] = [:]
     // This view is also used by onboarding, which keeps its existing presentation.
     var isAccountsWindow = false
@@ -145,23 +147,12 @@ struct CalendarSelectionView: View {
                                 Spacer(minLength: AppSpacing.none)
                                     .frame(width: isAccountsWindow ? nativeTitleInsets[group.id] ?? AppSpacing.none : AppSpacing.none)
                                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                    HStack(spacing: AppSpacing.xs) {
-                                        Button {
-                                            model.selectGroup(group.id, visible: true)
-                                        } label: {
-                                            Text("Select All")
-                                                .appText(.body, weight: isAccountsWindow ? .regular : .medium)
-                                        }
-                                        .accessibilityLabel("Select all calendars in \(group.account.name)")
-                                        Button {
-                                            model.selectGroup(group.id, visible: false)
-                                        } label: {
-                                            Text("Deselect All")
-                                                .appText(.body, weight: isAccountsWindow ? .regular : .medium)
-                                        }
-                                        .accessibilityLabel("Deselect all calendars in \(group.account.name)")
+                                    MixedStateCheckbox(title: "All", accessibilityLabel: "All calendars in \(group.account.name)", isOn: group.allSelected, isMixed: group.partiallySelected) {
+                                        model.selectGroup(group.id, visible: !group.allSelected)
                                     }
-                                    .buttonStyle(KaigiButtonStyle(isAccountsWindow ? .tertiary : .secondary))
+                                    // Preserve the former bulk-action row's geometry without control padding.
+                                    .frame(minHeight: max(bulkRowHeight, AppButtonSize.regular.height * AppTypography.scale(for: textSize)))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     ForEach(group.calendars) { calendar in
                                         Toggle(isOn: Binding(get: { model.selectedIDs.contains(calendar.id) }, set: { model.setCalendar(calendar.id, visible: $0) })) {
                                             HStack(spacing: AppSpacing.xs) {
