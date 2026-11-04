@@ -7,20 +7,15 @@ struct CalendarAccountsView: View {
             Text("Accounts & Calendars")
                 .appText(.title, weight: .semibold)
                 .accessibilityAddTraits(.isHeader)
-            Picker("Calendar view", selection: $model.page) {
-                Text("Connections")
-                    .tag(CalendarAccountsPage.connections)
-                Text("Visible calendars")
-                    .tag(CalendarAccountsPage.calendars)
+            SlidingSegmentedControl(title: "Calendar view", options: [.connections, .calendars], selection: $model.page) { page in
+                page == .connections ? "Connections" : "Visible calendars"
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .appText(.body)
+            .accessibilityIdentifier("calendar-page-selector")
             if model.page == .connections {
                 ProviderConnectionsView(model: model)
             }
             else {
-                CalendarSelectionView(model: model)
+                CalendarSelectionView(model: model, isAccountsWindow: true)
             }
         }
         .padding(AppSpacing.sm)
@@ -80,7 +75,7 @@ struct ProviderConnectionsView: View {
                                     }
                                     .accessibilityElement(children: .contain)
                                 }
-                                .appText(.body, weight: .medium)
+                                .appText(.body)
                                 .padding(AppSpacing.xs)
                                 .frame(maxWidth: .infinity, minHeight: AppLayout.providerCardHeight, maxHeight: .infinity, alignment: .topLeading)
                                 .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
@@ -110,6 +105,10 @@ struct ProviderConnectionsView: View {
 }
 struct CalendarSelectionView: View {
     @Bindable var model: CalendarAccountsViewModel
+    @State private var nativeTitleInsets: [AccountID: CGFloat] = [:]
+    // This view is also used by onboarding, which keeps its existing presentation.
+    var isAccountsWindow = false
+    private var sectionGap: CGFloat { isAccountsWindow ? AppSpacing.xs : AppSpacing.none }
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             HStack(spacing: AppSpacing.xs) {
@@ -121,10 +120,12 @@ struct CalendarSelectionView: View {
                     .appText(.caption)
                     .accessibilityIdentifier("selected-calendar-count")
             }
+            .padding(.bottom, sectionGap)
             TextField("Search calendars", text: $model.search)
                 .textFieldStyle(.roundedBorder)
                 .appText(.body)
                 .accessibilityLabel("Search calendars")
+                .padding(.bottom, sectionGap)
             if model.missingCount > 0 {
                 InlineMessage(text: "\(model.missingCount) selected calendars are unavailable. Selections are retained.")
             }
@@ -139,35 +140,46 @@ struct CalendarSelectionView: View {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.xs) {
                     ForEach(model.groups) { group in
                         DisclosureGroup(isExpanded: Binding(get: { group.expanded }, set: { model.setExpanded(group.id, expanded: $0) })) {
-                            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                                HStack(spacing: AppSpacing.xs) {
-                                    Button("Select All") {
-                                        model.selectGroup(group.id, visible: true)
-                                    }
-                                    .accessibilityLabel("Select all calendars in \(group.account.name)")
-                                    Button("Deselect All") {
-                                        model.selectGroup(group.id, visible: false)
-                                    }
-                                    .accessibilityLabel("Deselect all calendars in \(group.account.name)")
-                                }
-                                .buttonStyle(KaigiButtonStyle())
-                                ForEach(group.calendars) { calendar in
-                                    Toggle(isOn: Binding(get: { model.selectedIDs.contains(calendar.id) }, set: { model.setCalendar(calendar.id, visible: $0) })) {
-                                        HStack(spacing: AppSpacing.xs) {
-                                            Circle()
-                                                .fill(AppColors.calendar(calendar.color))
-                                                .frame(width: AppSpacing.xs, height: AppSpacing.xs)
-                                                .accessibilityHidden(true)
-                                            Text(calendar.name)
-                                                .appText(.body)
-                                                .lineLimit(2)
+                            HStack(alignment: .top, spacing: AppSpacing.none) {
+                                // Match the measured native disclosure title, without authored padding.
+                                Spacer(minLength: AppSpacing.none)
+                                    .frame(width: isAccountsWindow ? nativeTitleInsets[group.id] ?? AppSpacing.none : AppSpacing.none)
+                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                    HStack(spacing: AppSpacing.xs) {
+                                        Button {
+                                            model.selectGroup(group.id, visible: true)
+                                        } label: {
+                                            Text("Select All")
+                                                .appText(.body, weight: isAccountsWindow ? .regular : .medium)
                                         }
+                                        .accessibilityLabel("Select all calendars in \(group.account.name)")
+                                        Button {
+                                            model.selectGroup(group.id, visible: false)
+                                        } label: {
+                                            Text("Deselect All")
+                                                .appText(.body, weight: isAccountsWindow ? .regular : .medium)
+                                        }
+                                        .accessibilityLabel("Deselect all calendars in \(group.account.name)")
                                     }
-                                    .toggleStyle(.checkbox)
-                                    .tint(AppColors.accentFill)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .disabled(!calendar.isAvailable)
-                                    .accessibilityLabel(calendar.name)
+                                    .buttonStyle(KaigiButtonStyle(isAccountsWindow ? .tertiary : .secondary))
+                                    ForEach(group.calendars) { calendar in
+                                        Toggle(isOn: Binding(get: { model.selectedIDs.contains(calendar.id) }, set: { model.setCalendar(calendar.id, visible: $0) })) {
+                                            HStack(spacing: AppSpacing.xs) {
+                                                Circle()
+                                                    .fill(AppColors.calendar(calendar.color))
+                                                    .frame(width: AppSpacing.xs, height: AppSpacing.xs)
+                                                    .accessibilityHidden(true)
+                                                Text(calendar.name)
+                                                    .appText(.body)
+                                                    .lineLimit(2)
+                                            }
+                                        }
+                                        .toggleStyle(.checkbox)
+                                        .tint(AppColors.accentFill)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .disabled(!calendar.isAvailable)
+                                        .accessibilityLabel(calendar.name)
+                                    }
                                 }
                             }
                             .padding(.top, AppSpacing.xs)
@@ -175,13 +187,26 @@ struct CalendarSelectionView: View {
                         } label: {
                             HStack(spacing: AppSpacing.xs) {
                                 Text(group.account.name)
-                                    .appText(.body, weight: .medium);
-                                Spacer(minLength: AppSpacing.xs);
+                                    .appText(.body, weight: .medium)
+                                Spacer(minLength: AppSpacing.xs)
                                 Text("\(group.selectedCount) selected")
                                     .appText(.caption)
                                     .foregroundStyle(AppColors.secondary)
                             }
+                            .contentShape(Rectangle())
+                            .gesture(
+                                TapGesture().onEnded {
+                                    model.setExpanded(group.id, expanded: !group.expanded)
+                                },
+                                including: isAccountsWindow ? .all : .none
+                            )
+                            .onGeometryChange(for: CGFloat.self) {
+                                $0.frame(in: .named(group.id)).minX
+                            } action: {
+                                nativeTitleInsets[group.id] = $0
+                            }
                         }
+                        .coordinateSpace(name: group.id)
                         .padding(AppSpacing.xs)
                         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
                         .overlay {

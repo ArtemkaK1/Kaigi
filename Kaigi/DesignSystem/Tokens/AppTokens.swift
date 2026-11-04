@@ -27,6 +27,9 @@ enum AppLayout {
     // Fits 13 pt medium monospaced times ("11:00 AM" measures about 61.1 pt).
     static let timeColumn: CGFloat = 64
     static let cornerRadius: CGFloat = 8
+    // Matches the Accounts & Calendars native segmented picker's baseline height.
+    static let segmentedControlHeight: CGFloat = 24
+    static let segmentedControlWidth: CGFloat = 248
     static let providerCardHeight: CGFloat = 80
     static let providerIconSize: CGFloat = 24
     static let providerIconColumn: CGFloat = 32
