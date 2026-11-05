@@ -339,6 +339,7 @@ import AppKit
     }
 
     // Compare only the ring's outside band: changing the checkmark cannot satisfy this assertion.
+
     private func focusRingPixels(window: XCUIElement, control: XCUIElement) throws -> [SIMD3<Double>] {
         let windowFrame = window.frame
         let frame = control.frame.offsetBy(dx: -windowFrame.minX, dy: -windowFrame.minY)

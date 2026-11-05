@@ -58,9 +58,11 @@ enum KaigiButtonLevel { case primary, secondary, tertiary }
 struct KaigiButtonStyle: ButtonStyle {
     var level: KaigiButtonLevel = .secondary
     var size: AppButtonSize = .regular
+
     init(_ level: KaigiButtonLevel = .secondary, size: AppButtonSize = .regular) {
         self.level = level; self.size = size
     }
+
     func makeBody(configuration: Configuration) -> some View {
         KaigiButtonBody(configuration: configuration, level: level, size: size)
     }

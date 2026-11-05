@@ -11,6 +11,8 @@ for path in root.rglob('*.swift'):
     code = re.sub(r'//[^\n]*', '', text)
     relative = path.relative_to(root)
     imports = re.findall(r'^import (\w+)', code, re.M)
+    if 'FirebaseAnalytics' in imports and str(relative) != 'Infrastructure/Analytics/FirebaseAnalyticsAdapter.swift':
+        violations.append(f'{relative}: Firebase Analytics import outside its adapter')
     if relative.parts[0] == 'Domain':
         for module in imports:
             if module != 'Foundation': violations.append(f'{relative}: domain imports {module}')

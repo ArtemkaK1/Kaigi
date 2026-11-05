@@ -7,9 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BA53404A309C040D00211539 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = BA534049309C040D00211539 /* FirebaseAnalytics */; };
+		BA53404A309C040D00211539 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = BA534049309C040D00211539 /* FirebaseAnalyticsCore */; };
 		BA53404C309C040D00211539 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BA53404B309C040D00211539 /* FirebaseCore */; };
-		BA53404E309C040D00211539 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = BA53404D309C040D00211539 /* FirebaseCrashlytics */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,9 +56,8 @@
 		BA99ED6C308C095700597854 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				BA53404E309C040D00211539 /* FirebaseCrashlytics in Frameworks */,
 				BA53404C309C040D00211539 /* FirebaseCore in Frameworks */,
-				BA53404A309C040D00211539 /* FirebaseAnalytics in Frameworks */,
+				BA53404A309C040D00211539 /* FirebaseAnalyticsCore in Frameworks */,
 			);
 		};
 		BA99ED79308C095900597854 /* Frameworks */ = {
@@ -102,6 +100,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = BA99ED8E308C095A00597854 /* Build configuration list for PBXNativeTarget "Kaigi" */;
 			buildPhases = (
+				F17400000000000000000001 /* Validate Firebase configuration */,
 				BA99ED6B308C095700597854 /* Sources */,
 				BA99ED6C308C095700597854 /* Frameworks */,
 				BA99ED6D308C095700597854 /* Resources */,
@@ -113,9 +112,8 @@
 			);
 			name = Kaigi;
 			packageProductDependencies = (
-				BA534049309C040D00211539 /* FirebaseAnalytics */,
+				BA534049309C040D00211539 /* FirebaseAnalyticsCore */,
 				BA53404B309C040D00211539 /* FirebaseCore */,
-				BA53404D309C040D00211539 /* FirebaseCrashlytics */,
 			);
 			productName = Kaigi;
 			productReference = BA99ED6F308C095700597854 /* Kaigi.app */;
@@ -227,6 +225,22 @@
 			);
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F17400000000000000000001 /* Validate Firebase configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			inputPaths = (
+				"$(SRCROOT)/Kaigi/GoogleService-Info.plist",
+				"$(SRCROOT)/Tools/validate-firebase-config.py",
+			);
+			name = "Validate Firebase configuration";
+			shellPath = /bin/sh;
+			shellScript = (
+				"/usr/bin/python3 \"$SRCROOT/Tools/validate-firebase-config.py\" \"$SRCROOT/Kaigi/GoogleService-Info.plist\"",
+			);
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		BA99ED6B308C095700597854 /* Sources */ = {
@@ -395,6 +409,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -434,6 +449,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -586,20 +602,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		BA534049309C040D00211539 /* FirebaseAnalytics */ = {
+		BA534049309C040D00211539 /* FirebaseAnalyticsCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
+			productName = FirebaseAnalyticsCore;
 		};
 		BA53404B309C040D00211539 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
-		};
-		BA53404D309C040D00211539 /* FirebaseCrashlytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCrashlytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

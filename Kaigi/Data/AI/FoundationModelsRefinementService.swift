@@ -26,6 +26,7 @@ import FoundationModels
         case .unavailable: return "On-device AI is currently unavailable. Manual notes remain available."
         }
     }
+
     func refine(_ text: String, action: RefinementAction) async throws -> RefinementResult {
         if let unavailableReason { throw RefinementFailure(message: unavailableReason) }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.count <= 12000 else {
@@ -48,6 +49,7 @@ import FoundationModels
             return RefinementResult(text: try Self.validatedStructure(sections, source: text))
         }
     }
+
     static func validatedStructure(_ sections: [(String, [String])], source: String) throws -> String {
         let excerpts = sections.flatMap(\.1)
         guard !excerpts.isEmpty, excerpts.allSatisfy({ !$0.isEmpty && source.contains($0) }) else {

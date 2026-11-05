@@ -9,6 +9,9 @@ import SwiftUI
                     .frame(width: AppLayout.notesWidth)
                     .background(AppColors.background)
                     .tint(AppColors.accent)
+                    .background {
+                        WindowPresentationObserver(onPresented: settings.presented, onDismissed: settings.dismissed)
+                    }
             }
         }
         .windowResizability(.contentSize)

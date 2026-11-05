@@ -101,6 +101,7 @@ enum AppTypography {
     static let buttonWeight = AppFontWeight.medium
     // macOS can leave ScaledMetric unchanged for an explicit Dynamic Type environment.
     // Keep native scaling when it is larger, and honor the requested size as a floor.
+
     static func scale(for size: DynamicTypeSize) -> Double {
         switch size {
         case .xSmall: 0.88
@@ -133,6 +134,7 @@ private struct AppTextModifier: ViewModifier {
     @ScaledMetric(relativeTo: .headline) private var section = 16
     @ScaledMetric(relativeTo: .title) private var title = 20
     private var size: Double { switch role { case .caption: caption; case .body: body; case .section: section; case .title: title } }
+
     func body(content: Content) -> some View {
         content
             .font(.system(size: max(size, role.baseSize * AppTypography.scale(for: dynamicTypeSize)), weight: weight.fontWeight))

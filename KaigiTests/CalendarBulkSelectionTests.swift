@@ -39,7 +39,7 @@ import Testing
         let restored = AppPreferencesStore(defaults: fixture.defaults)
         #expect(restored.selectedCalendarIDs == [])
         fixture.container.visibility.initializeIfNeeded()
-        let reloaded = CalendarAccountsViewModel(coordinator: fixture.container.coordinator, visibility: CalendarVisibilityUseCase(preferences: restored, coordinator: fixture.container.coordinator), permissionSettings: fixture.actions)
+        let reloaded = CalendarAccountsViewModel(coordinator: fixture.container.coordinator, visibility: CalendarVisibilityUseCase(preferences: restored, coordinator: fixture.container.coordinator), permissionSettings: fixture.actions, analytics: NoOpAnalyticsTracker())
         #expect(reloaded.selectedIDs.isEmpty)
         #expect(reloaded.groups.allSatisfy { !$0.allSelected && !$0.partiallySelected })
         await fixture.container.agenda.load()
@@ -53,7 +53,7 @@ import Testing
         let provider = MutableCatalogProvider(snapshot: CalendarCatalog(accounts: [source.accounts[0]], calendars: [source.calendars[0], CalendarDescriptor(id: source.calendars[1].id, accountID: source.accounts[0].id, name: "Unavailable", color: .neutral, isAvailable: false)]))
         let coordinator = CalendarAccountCoordinator(providers: [provider])
         let visibility = CalendarVisibilityUseCase(preferences: fixture.preferences, coordinator: coordinator)
-        let model = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: fixture.actions)
+        let model = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: fixture.actions, analytics: NoOpAnalyticsTracker())
         let id = try #require(model.groups.first?.id)
         #expect(model.groups[0].partiallySelected)
         model.selectGroup(id, visible: true)
@@ -92,8 +92,12 @@ import Testing
     let connectionState = AccountConnectionState.connected
     var snapshot: CalendarCatalog
     var onChange: (() -> Void)?
+
     init(snapshot: CalendarCatalog) { self.snapshot = snapshot }
+
     func catalog() -> CalendarCatalog { snapshot }
+
     func connect() async throws {}
+
     func events(in interval: DateInterval, visibleCalendarIDs: Set<CalendarID>) async throws -> [CalendarEvent] { [] }
 }

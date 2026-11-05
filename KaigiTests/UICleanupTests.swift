@@ -42,6 +42,7 @@ import UserNotifications
         model.setCarryEnabled(true); #expect(model.previous.count == 1)
         #expect(!((try fixture.store.fetchRevisions(id: current.id)).isEmpty))
     }
+
     @Test func recoveredMeetingsStayOnTheirDayAndHiddenCalendarsStayHidden() async throws {
         let fixture = try TestComposition(); defer { fixture.clearPreferences() }
         let now = Calendar.current.startOfDay(for: .now).addingTimeInterval(9 * 3600)
@@ -64,6 +65,7 @@ import UserNotifications
         await fixture.container.agenda.load()
         #expect(!fixture.container.agenda.recovered.contains { $0.id == liveNote.id })
     }
+
     @Test func historyAndContextRemainAssociatedAfterCalendarRemoval() throws {
         let fixture = try TestComposition(features: .allEnabled); defer { fixture.clearPreferences() }
         let first = KaigiTests().meeting()
@@ -79,6 +81,7 @@ import UserNotifications
         model.openHistory(other); #expect(fixture.actions.floating.isEmpty)
         model.openHistory(older); #expect(fixture.actions.floating == [older.id])
     }
+
     @Test func aiSettingPersistsAndDisablingDiscardsOnlyTheSuggestion() async throws {
         let fixture = try TestComposition(ai: MockAIRefinementService(result: "Suggestion"), features: .allEnabled); defer { fixture.clearPreferences() }
         let record = try fixture.store.openNote(for: KaigiTests().meeting())
@@ -96,6 +99,7 @@ import UserNotifications
         let restored = SystemPreferencesService(defaults: fixture.defaults, notifications: center)
         #expect(!restored.aiEnabled)
     }
+
     @Test func remindersUseFiveMinutesAndReplacePendingRequests() async throws {
         let fixture = try TestComposition(); defer { fixture.clearPreferences() }
         fixture.defaults.set(true, forKey: "remindersEnabled")
@@ -119,8 +123,12 @@ import UserNotifications
 
 @MainActor final class NotificationCenterSpy: NotificationCenterClient {
     var requests: [String: UNNotificationRequest] = [:]
+
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool { true }
+
     func removeAllPendingNotificationRequests() { requests.removeAll() }
+
     func removePendingNotificationRequests(withIdentifiers identifiers: [String]) { identifiers.forEach { requests.removeValue(forKey: $0) } }
+
     func add(_ request: UNNotificationRequest) async throws { requests[request.identifier] = request }
 }

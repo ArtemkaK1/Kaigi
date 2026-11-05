@@ -2,11 +2,12 @@ import Foundation
 import UserNotifications
 
 extension DependencyContainer {
-    static func makeLive(actions: any ApplicationActions, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
+    static func makeLive(actions: any ApplicationActions, analytics: any AnalyticsTracking, isTesting: Bool = false, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
         StartupTrace.mark("composition.begin")
         defer { StartupTrace.mark("composition.end") }
         #if DEBUG
-        let arguments = ProcessInfo.processInfo.arguments
+        let launchArguments = ProcessInfo.processInfo.arguments
+        let arguments = isTesting && !launchArguments.contains("--sample") ? ["--sample"] : launchArguments
         let sample = arguments.contains("--sample")
         let firstRun = arguments.contains("--onboarding")
         let defaults: UserDefaults
@@ -49,7 +50,7 @@ extension DependencyContainer {
         }
         #endif
         StartupTrace.mark("notes.created")
-        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, features: .forLaunch(arguments: ProcessInfo.processInfo.arguments), closeOnboarding: closeOnboarding)
+        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, features: .forLaunch(arguments: ProcessInfo.processInfo.arguments), analytics: analytics, closeOnboarding: closeOnboarding)
     }
 }
 #if DEBUG
@@ -58,8 +59,11 @@ extension DependencyContainer {
     var remindersEnabled = false
     var launchAtLogin = false
     var message: String?
+
     func setLaunchAtLogin(_ value: Bool) { launchAtLogin = value }
+
     func setReminders(_ enabled: Bool) async { remindersEnabled = enabled }
+
     func schedule(_ meetings: [Meeting], now: Date) async {}
 }
 #endif

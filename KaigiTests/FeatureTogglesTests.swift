@@ -143,6 +143,7 @@ import Testing
 @MainActor private final class RefinementSpy: AIRefinementService {
     var unavailableReason: String? { nil }
     var actions: [RefinementAction] = []
+
     func refine(_ text: String, action: RefinementAction) async throws -> RefinementResult {
         actions.append(action); return RefinementResult(text: "Reviewed")
     }

@@ -3,6 +3,7 @@ import AppKit
 
 @MainActor final class KaigiUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
+
     func launch(_ extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--sample", "--show-agenda"] + extra
@@ -15,12 +16,14 @@ import AppKit
         }
         return app
     }
+
     func capture(_ element: XCUIElement, _ name: String) {
         let attachment = XCTAttachment(screenshot: element.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
     func testFreeControlsAndCompactEditorAcrossAppearances() throws {
         for appearance in ["Aqua", "DarkAqua"] {
             let app = launch(["--context-history", "-NSAppearance", appearance, "-AppleLocale", "en_US"])
@@ -57,6 +60,26 @@ import AppKit
             app.terminate()
         }
     }
+
+    func testMarkdownExportCancellationPreservesSyntheticDraft() throws {
+        let app = launch()
+        defer { app.terminate() }
+        app.buttons["Open notes for Product conversation"].click()
+        let editor = app.textViews["Meeting notes"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.click(); editor.typeText("Synthetic export cancellation draft")
+        app.buttons["Export Markdown"].click()
+        let cancel = app.windows.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.click()
+        // The native save panel can dismiss the transient agenda popover.
+        if !editor.waitForExistence(timeout: 2) { app.statusItems.firstMatch.click() }
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        XCTAssertEqual(editor.value as? String, "Synthetic export cancellation draft")
+        XCTAssertTrue(app.staticTexts["Saved locally"].exists)
+        XCTAssertFalse(app.staticTexts["Save failed — your draft is still open"].exists)
+    }
+
     func testAllEnabledControlsRemainAvailable() throws {
         let app = launch(["--all-features", "--context-history", "--mock-ai"])
         let weekly = app.buttons["Open notes for Weekly planning"]
@@ -68,6 +91,7 @@ import AppKit
         capture(app.popovers["Kaigi agenda"], "FeatureToggles all-enabled editor")
         app.terminate()
     }
+
     func testDayNavigationSelectionAndFloatingEditor() throws {
         let app = launch(["--all-features"])
         let next = app.buttons["Next day"]
@@ -86,6 +110,7 @@ import AppKit
         app.buttons["Float notes"].click()
         XCTAssertTrue(app.windows["Kaigi — Product conversation"].waitForExistence(timeout: 3))
     }
+
     func testFirstStatusClickAfterLaunch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--sample", "--fifty-calendars", "--startup-timing"]
@@ -98,6 +123,7 @@ import AppKit
         print("KAIGI_FIRST_CLICK_UI seconds=\(ProcessInfo.processInfo.systemUptime - began)")
         app.terminate()
     }
+
     func testKeyboardNavigationAndMeetingHistory() throws {
         let app = launch(["--all-features"])
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
@@ -118,6 +144,7 @@ import AppKit
         app.buttons["Open notes for Weekly planning"].click()
         XCTAssertEqual(app.textViews["Meeting notes"].value as? String, "Unresolved: review scope")
     }
+
     func testContextWindowCarryConfirmationAndSharedEarlierEditor() throws {
         for appearance in ["Aqua", "DarkAqua"] {
             let app = launch(["--all-features", "--context-history", "-NSAppearance", appearance, "-AppleLocale", "en_US"])
@@ -178,6 +205,7 @@ import AppKit
             app.terminate()
         }
     }
+
     func testEmptyStateAndStatusItemDismissal() throws {
         let app = launch(["--empty"])
         let empty = app.staticTexts["Room to focus"]
@@ -190,6 +218,7 @@ import AppKit
         app.typeKey(.escape, modifierFlags: [])
         XCTAssertFalse(empty.exists)
     }
+
     func testLightAndDarkAgenda() throws {
         var materialBrightness: [String: CGFloat] = [:]
         for appearance in ["Aqua", "DarkAqua"] {
@@ -220,6 +249,7 @@ import AppKit
         }
         XCTAssertGreaterThan(try XCTUnwrap(materialBrightness["Aqua"]), try XCTUnwrap(materialBrightness["DarkAqua"]) + 0.3)
     }
+
     func testNativeSettingsSceneOpensAccountManagement() throws {
         let app = launch()
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
@@ -231,6 +261,7 @@ import AppKit
         XCTAssertTrue(app.staticTexts["Connected through macOS"].exists)
         assertProviderCardRows(in: app.windows["Accounts & Calendars"])
     }
+
     func testOnboardingConnectionSelectionAndCompletion() throws {
         let app = launch(["--onboarding", "--fifty-calendars"])
         let window = app.windows["Welcome to Kaigi"]
@@ -258,6 +289,7 @@ import AppKit
         XCTAssertFalse(window.exists)
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 3))
     }
+
     func testOnboardingSkipPersistsAcrossRelaunch() throws {
         let session = UUID().uuidString
         let args = ["--onboarding", "--test-session", session]
@@ -273,6 +305,7 @@ import AppKit
         app.buttons["Accounts & Calendars"].click()
         XCTAssertTrue(app.windows["Accounts & Calendars"].waitForExistence(timeout: 3))
     }
+
     func testCompactOneAndFifteenLongMeetings() throws {
         for count in ["--one-meeting", "--fifteen-meetings"] {
             let app = launch([count, "--long-titles"])
@@ -293,6 +326,7 @@ import AppKit
             app.terminate()
         }
     }
+
     func testScaledTextInConstrainedPanel() throws {
         let normal = launch(["--one-meeting", "--long-titles"])
         let normalCard = normal.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Open notes for")).firstMatch
@@ -311,6 +345,7 @@ import AppKit
         XCTAssertTrue(app.textViews["Meeting notes"].waitForExistence(timeout: 3))
         let screenshot = XCTAttachment(screenshot: panel.screenshot()); screenshot.name = "Synthetic scaled text constrained panel"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
+
     func testTimeColumnAcrossClockFormatsAndTextSizes() throws {
         for (uses24Hours, appearance, large) in [(false, "Aqua", false), (true, "DarkAqua", false), (false, "DarkAqua", true), (true, "Aqua", true)] {
             let app = launch(["--long-titles", "-AppleLocale", uses24Hours ? "en_GB" : "en_US", "-NSAppearance", appearance] + (large ? ["--large-text"] : []))
@@ -330,6 +365,7 @@ import AppKit
             app.terminate()
         }
     }
+
     func testStatusContextMenuSettingsAndQuit() throws {
         let app = launch(["--all-features"])
         XCTAssertTrue(app.buttons["Next day"].waitForExistence(timeout: 8))
@@ -344,6 +380,7 @@ import AppKit
         app.statusItems.firstMatch.menuItems["Quit Kaigi"].click()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 3))
     }
+
     func testAIReviewCancelApplyAndDisabledSetting() throws {
         let app = launch(["--all-features", "--mock-ai"])
         app.buttons["Open notes for Product conversation"].click()
@@ -390,6 +427,7 @@ import AppKit
             }
         }
     }
+
     func testProviderStatusColumnsAcrossAppearanceAndTextSizes() throws {
         for (appearance, large) in [("Aqua", false), ("DarkAqua", false), ("Aqua", true), ("DarkAqua", true)] {
             let app = launch(["--onboarding", "--fifty-calendars", "-NSAppearance", appearance] + (large ? ["--large-text"] : []))
@@ -431,6 +469,7 @@ import AppKit
         capture(denied.windows["Welcome to Kaigi"], "Synthetic equal-height permission-denied providers")
         denied.terminate()
     }
+
     func testAIReviewErrorDoesNotOfferSaveRetryForSavedNotes() throws {
         let app = launch(["--all-features", "--mock-ai"])
         app.buttons["Open notes for Product conversation"].click()

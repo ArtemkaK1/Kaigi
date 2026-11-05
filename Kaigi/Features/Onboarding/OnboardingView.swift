@@ -48,7 +48,7 @@ struct OnboardingView: View {
                     }
                     .defaultScrollAnchor(.center, for: .alignment)
                 case .connect:
-                    ProviderConnectionsView(model: model.accounts)
+                    ProviderConnectionsView(model: model.accounts, connect: model.requestConnection)
                 case .selection:
                     CalendarSelectionView(model: model.accounts)
                 case .ready:

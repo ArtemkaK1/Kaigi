@@ -41,7 +41,9 @@ struct MixedStateCheckbox: NSViewRepresentable {
 
     final class Coordinator: NSObject {
         var action: () -> Void
+
         init(action: @escaping () -> Void) { self.action = action }
+
         @objc func activate(_ sender: NativeCheckbox) {
             sender.focusForActivation()
             action()

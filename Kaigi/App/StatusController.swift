@@ -1,20 +1,28 @@
 import AppKit
+import FirebaseCore
 import SwiftUI
 
 @MainActor final class AgendaPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+
     override func cancelOperation(_ sender: Any?) { orderOut(nil) }
 }
 @MainActor final class AppRouter: ApplicationActions {
     weak var windows: AppWindowCoordinator?
     private let exporter: MarkdownExporter
     private let features: FeatureToggles
+
     init(exporter: MarkdownExporter, features: FeatureToggles) { self.exporter = exporter; self.features = features }
+
     func showAccounts() { guard features.isEnabled(.calendarManagement) else { return }; windows?.showAccounts() }
+
     func showFloatingNote(_ id: NoteID) { guard features.isEnabled(.floatingNotes) else { return }; windows?.showFloatingNote(id) }
+
     func showMeetingContext(_ id: NoteID) { guard features.isEnabled(.meetingHistory) || features.isEnabled(.recurringContext) else { return }; windows?.showMeetingContext(id) }
-    func export(_ document: MarkdownDocument) async throws { guard features.isEnabled(.markdownExport) else { return }; try await exporter.export(document) }
+
+    @discardableResult func export(_ document: MarkdownDocument) async throws -> ExportOutcome { guard features.isEnabled(.markdownExport) else { return .cancelled }; return try await exporter.export(document) }
+
     func dismissOnboarding() { windows?.closeOnboarding() }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -22,6 +30,8 @@ import SwiftUI
     private(set) var container: DependencyContainer?
     private var router: AppRouter?
     private var startupFailure: Error?
+    private var firebaseAnalytics: FirebaseAnalyticsAdapter?
+
     override init() {
         super.init()
         StartupTrace.mark("delegate.begin")
@@ -29,12 +39,28 @@ import SwiftUI
         // its injected ViewModel first, without creating windows or requesting access.
         do {
             let router = AppRouter(exporter: MarkdownExporter(), features: .forLaunch(arguments: ProcessInfo.processInfo.arguments)); self.router = router
-            container = try DependencyContainer.makeLive(actions: router, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
+            let environment = ProcessInfo.processInfo.environment
+            let isTesting = environment["XCTestConfigurationFilePath"] != nil || environment["XCTestBundlePath"] != nil || NSClassFromString("XCTestCase") != nil
+            let analytics: any AnalyticsTracking
+            if AnalyticsLaunchPolicy.usesLiveAnalytics(arguments: ProcessInfo.processInfo.arguments, isTesting: isTesting) {
+                let adapter = FirebaseAnalyticsAdapter()
+                firebaseAnalytics = adapter
+                analytics = adapter
+            } else {
+                analytics = NoOpAnalyticsTracker()
+            }
+            container = try DependencyContainer.makeLive(actions: router, analytics: analytics, isTesting: isTesting, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
         } catch { startupFailure = error }
         StartupTrace.mark("delegate.end")
     }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         StartupTrace.mark("didFinishLaunching")
+        if let firebaseAnalytics {
+            FirebaseApp.configure()
+            firebaseAnalytics.configurationDidComplete()
+            self.firebaseAnalytics = nil
+        }
         NSApp.setActivationPolicy(.accessory)
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
@@ -54,9 +80,11 @@ import SwiftUI
         let windows = AppWindowCoordinator(container: container); self.windows = windows; router.windows = windows
         windows.start()
     }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { windows?.showAgenda() }; return true
     }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         do { try container?.flushDrafts(); return .terminateNow }
         catch {
@@ -67,16 +95,19 @@ import SwiftUI
         }
     }
 }
-@MainActor final class AppWindowCoordinator: NSObject, NSWindowDelegate {
+@MainActor final class AppWindowCoordinator: NSObject, NSWindowDelegate, NSPopoverDelegate {
     private let container: DependencyContainer
     private var statusItem: NSStatusItem?
     private let agendaPopover = NSPopover()
+    private var agendaIsPresented = false
     private var onboardingWindow: NSWindow?
     private var accountsWindow: NSWindow?
     private var floatingPanels: [NoteID: AgendaPanel] = [:]
     private var contextWindows: [NoteID: NSWindow] = [:]
     private var notificationTokens: [NSObjectProtocol] = []
+
     init(container: DependencyContainer) { self.container = container }
+
     func start() {
         StartupTrace.mark("status.begin")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength); statusItem = item
@@ -90,6 +121,7 @@ import SwiftUI
         item.button?.target = self; item.button?.action = #selector(toggle)
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         StartupTrace.mark("status.visible")
+        agendaPopover.delegate = self
         agendaPopover.behavior = .transient
         agendaPopover.animates = false
         agendaPopover.appearance = NSApp.appearance
@@ -121,6 +153,7 @@ import SwiftUI
             #endif
         }
     }
+
     @objc private func toggle() {
         StartupTrace.mark("status.click")
         #if DEBUG
@@ -137,6 +170,7 @@ import SwiftUI
             NSMenu.popUpContextMenu(menu, with: event, for: button)
         } else if agendaPopover.isShown { closeAgenda() } else { showAgenda() }
     }
+
     @objc private func showSettings() {
         closeAgenda(); NSApp.activate(ignoringOtherApps: true)
         // Invoke SwiftUI's existing native Settings command; keep a single scene.
@@ -147,7 +181,9 @@ import SwiftUI
             }
         }
     }
+
     func closeAgenda() { agendaPopover.performClose(nil) }
+
     func showAgenda() {
         StartupTrace.mark("panel.begin")
         guard let button = statusItem?.button else { return }
@@ -161,19 +197,32 @@ import SwiftUI
         StartupTrace.mark("panel.ordered")
         DispatchQueue.main.async { StartupTrace.mark("panel.nextRunLoop") }
     }
+
+    func popoverDidShow(_ notification: Notification) {
+        guard !agendaIsPresented else { return }
+        agendaIsPresented = true
+        container.analytics.track(.menubarAgendaOpened)
+    }
+
+    func popoverDidClose(_ notification: Notification) { agendaIsPresented = false }
+
     private func resizeAgenda(height requestedHeight: CGFloat) {
         let visible = statusItem?.button?.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
         let height = min(max(1, requestedHeight), visible.height - AppSpacing.sm)
         agendaPopover.contentSize = NSSize(width: AppLayout.panelWidth, height: height)
     }
+
     func showAccounts() {
         guard container.features.isEnabled(.calendarManagement) else { return }
         closeAgenda(); container.accounts.refresh()
         if accountsWindow == nil {
             accountsWindow = makeWindow(title: "Accounts & Calendars", root: CalendarAccountsView(model: container.accounts))
         }
+        let wasVisible = accountsWindow?.isVisible == true
         NSApp.activate(ignoringOtherApps: true); accountsWindow?.makeKeyAndOrderFront(nil)
+        if !wasVisible, accountsWindow?.isVisible == true { container.accounts.pagePresented() }
     }
+
     func showOnboarding() {
         closeAgenda()
         if onboardingWindow == nil {
@@ -182,7 +231,9 @@ import SwiftUI
         }
         resizeOnboarding(container.onboarding.stage)
         NSApp.activate(ignoringOtherApps: true); onboardingWindow?.makeKeyAndOrderFront(nil)
+        if onboardingWindow?.isVisible == true { container.onboarding.presented() }
     }
+
     private func resizeOnboarding(_ stage: OnboardingStage) {
         guard let window = onboardingWindow else { return }
         let height: CGFloat = switch stage {
@@ -194,7 +245,9 @@ import SwiftUI
         window.setContentSize(NSSize(width: window.contentView?.bounds.width ?? AppLayout.onboardingWidth, height: height))
         window.setFrameOrigin(NSPoint(x: center.x - window.frame.width / 2, y: center.y - window.frame.height / 2))
     }
+
     func closeOnboarding() { onboardingWindow?.close(); showAgenda() }
+
     private func makeWindow<V: View>(title: String, root: V) -> NSWindow {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         window.title = title; window.isReleasedWhenClosed = false; window.minSize = NSSize(width: 480, height: 360); window.delegate = self
@@ -207,6 +260,7 @@ import SwiftUI
         ); host.sizingOptions = []; window.contentViewController = host
         window.setContentSize(NSSize(width: AppLayout.onboardingWidth, height: AppLayout.onboardingHeight)); window.center(); return window
     }
+
     func showMeetingContext(_ id: NoteID) {
         guard container.features.isEnabled(.meetingHistory) || container.features.isEnabled(.recurringContext) else { return }
         do {
@@ -224,6 +278,7 @@ import SwiftUI
             contextWindows[id]?.makeKeyAndOrderFront(nil)
         } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
     }
+
     func showFloatingNote(_ id: NoteID) {
         guard container.features.isEnabled(.floatingNotes) else { return }
         do {
@@ -241,8 +296,10 @@ import SwiftUI
             panel.contentViewController = host; floatingPanels[id] = panel; NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil)
         } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
     }
+
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
+        if window === accountsWindow { container.accounts.pageDismissed() }
         if window === onboardingWindow { container.onboarding.windowClosed() }
         if let id = floatingPanels.first(where: { $0.value === window })?.key { floatingPanels.removeValue(forKey: id) }
         if let id = contextWindows.first(where: { $0.value === window })?.key { contextWindows.removeValue(forKey: id) }

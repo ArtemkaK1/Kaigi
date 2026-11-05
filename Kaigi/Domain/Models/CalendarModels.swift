@@ -3,7 +3,9 @@ import Foundation
 nonisolated struct CalendarID: RawRepresentable, Codable, Hashable, Sendable, Identifiable {
     let rawValue: String
     var id: String { rawValue }
+
     init(rawValue: String) { self.rawValue = rawValue }
+
     init(provider: CalendarProviderKind, account: AccountID, externalID: String) {
         rawValue = provider == .system ? externalID : "provider:" + [provider.rawValue, account.rawValue, externalID].map { "\($0.utf8.count):\($0)" }.joined()
     }

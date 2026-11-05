@@ -8,7 +8,7 @@ Kaigi (会議, “meeting”) is a native macOS menu bar app for meetings and pr
 
 Use Xcode 26 or newer with the macOS SDK. The app targets macOS 15 or newer; macOS 15 runtime compatibility still requires validation. Internal all-enabled AI testing requires macOS 26 or newer, supported Apple Intelligence hardware and language, Apple Intelligence enabled, and a ready model. AI is unavailable in the free configuration.
 
-Open `Kaigi.xcodeproj`, select the **Kaigi** shared scheme and **My Mac**, then build and run. Local signed builds require a development team and signing identity available to Xcode. The project uses automatic signing.
+Open `Kaigi.xcodeproj`, select the **Kaigi** shared scheme and **My Mac**, then build and run. Local signed builds require a development team and signing identity available to Xcode. The project uses automatic signing. Before the first build, obtain the existing Firebase Apple app configuration from the owner and place it at `Kaigi/GoogleService-Info.plist` (ignored by Git); see [Analytics setup and privacy](Docs/Analytics.md). The build validates it without printing values. The required macOS Keychain Sharing capability needs a registered development Mac and matching profile.
 
 ```sh
 xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -configuration Debug build
@@ -16,6 +16,8 @@ xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -configuration Release build
 xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -destination 'platform=macOS' \
   -parallel-testing-enabled NO test
 python3 Tools/verify-architecture.py
+python3 Tools/verify-swift-spacing.py
+python3 Tools/test-analytics-release.py
 python3 Tools/test-transfer-data.py
 python3 Tools/test-feature-toggles-release.py
 git diff --check
@@ -47,7 +49,7 @@ Existing Meetrail data is not migrated or removed automatically. Read [the data 
 
 Views → ViewModels → Domain use cases/services → repository/provider protocols → Data/Infrastructure adapters. App composition constructs concrete dependencies and coordinates windows. ViewModels use Foundation/Observation with `@MainActor @Observable`; SwiftData, EventKit, and Foundation Models stay in Data. Infrastructure owns OS export, browser, notification, permission-settings, and login-item adapters. Shared DesignSystem components render values and forward actions.
 
-The composition root injects one immutable, typed `FeatureToggles` value into ViewModels, application actions and window coordination. Views render their ViewModel's availability. There are no third-party dependencies, mutable flag services, remote settings, payment state or persisted toggle values.
+The composition root injects one immutable, typed `FeatureToggles` value into ViewModels, application actions and window coordination. Views render their ViewModel's availability. Firebase Analytics is the only third-party product integration. Feature availability has no mutable flag service, remote settings, payment state or persisted toggle values.
 
 Calendar providers register through `CalendarAccountCoordinator`. Future provider identities are namespaced by provider, account, and calendar. The [design system](Docs/Brand/DesignSystem.md) documents adaptive purple/neutral colors, native typography, spacing, and controls. Every SwiftUI View modifier starts on its own line.
 
@@ -91,8 +93,22 @@ Normal `--sample` names and IDs are unchanged. If `--fifty-calendars` is also sp
 
 Validation on macOS 26.6.2 / Xcode 27 covers 60 synthetic unit tests and seven focused UI tests across selected runs: checkbox states/transitions, unfiltered bulk semantics, missing/unavailable IDs, empty-selection persistence, isolated automatic/explicit sessions, notes, Join dispatch, Light/Dark captures, normal and 50-calendar profiles, enlarged text, selector keyboard behavior and onboarding. Signed Debug/Release builds, signature verification, architecture checks, Release-selector compilation, absence of marketing flags/names in the Release executable, and `git diff --check` pass. Join dispatch is checked through an injected opener; no external conference was opened. Native accessibility role, account label, mixed value and Space activation are automated; spoken VoiceOver and macOS 15 runtime validation were not performed. Production stores, real EventKit calendars, and external services were not exercised.
 
+## Analytics integration
+
+Normal launches automatically use Firebase Analytics with a closed 25-event vocabulary. Calendar/note content, names, IDs, URLs, search terms and file paths are excluded from custom payloads. Firebase still collects installation identifiers, interaction/session information and device/app metadata; this is not anonymous or data-free analytics. IDFA/IDFV and advertising personalization are disabled. No user IDs/properties, Crashlytics, Remote Config or Ads integration are added. See [the event specification, SDK disclosure audit, configuration setup and owner DebugView instructions](Docs/Analytics.md). App Store Connect privacy declarations and the website Privacy Policy require owner updates before distribution; this task does not modify the website or submit a build.
+
+Synthetic Debug flags and XCTest hosts select NoOp and never configure Firebase; tests use spies and synthetic data. The early Settings dependency construction stays intact, with SDK configuration in the existing macOS delegate before tracker activation and window startup. `Tools/verify-analytics-bundle.py` checks actual bundled configuration, privacy Booleans, entitlements and dependencies. The formatting guard checks declaration blank lines without adding a formatter dependency.
+
+### Verification — 5 November 2026
+
+On macOS 26.6.2 / Xcode 27.0, final signed Debug and Release builds passed. All **72 synthetic unit tests** passed, including the 25-event catalog, every parameter variant, permission/export/settings outcomes, disabled operations, persistence, XCTest isolation and real native popover/window presentation deduplication. **Six focused UI tests** passed across selected runs: first status click, export cancellation with draft preservation, onboarding connection/selection/completion, native Settings → Connections, status-menu Settings/Quit, and calendar search/whole-account All selection across appearances. The full unrelated UI suite and separately provisioned live-calendar fixture test were not run; selected runs have no skipped tests. An initial new UI test targeted a Touch Bar Cancel element; the corrected window-scoped selector passes. A native regression test caught an immediate-popover-state timing issue; tracking now uses `popoverDidShow` and the regression passes.
+
+Both final bundles pass configuration-equality/exactly-one-resource checks, generated Boolean privacy flags, bundle identity, signed sandbox/network/Keychain entitlements, absent advertising/Crashlytics libraries, and strict deep signature verification. Release contains no XCTest bundle or Debug QA selector markers. The existing development identity was used with normal automatic device/profile provisioning; no identities were generated/revoked. Architecture and Swift-spacing checks, compiled Debug/Release analytics selectors, the Release FeatureToggles selector, two synthetic data-transfer tests and `git diff --check` pass. Compiler isolation warnings around FeatureToggles default arguments and the no-AppIntents metadata warning remain; builds have no errors.
+
+A real **non-synthetic Debug** launch with `-FIRDebugEnabled` stayed running and the SDK reported Analytics startup and collection enabled. It was then relaunched with `-FIRDebugDisabled`; only fixed status observations were retained, without Firebase configuration values. **DebugView receipt and parameter display are not verified:** Firebase Console redirected to Google sign-in. Follow [the exact owner checks](Docs/Analytics.md#debugview-owner-verification). Cloud project/stream settings, Google data-sharing/Ads links and retention require owner review. No real notes were edited, calendar permissions changed, conference destination opened, or real reminder/login setting changed for validation. Those flows have synthetic/injected coverage; live OS/external-service behavior, spoken VoiceOver and macOS 15 runtime remain unverified. No archive, upload or submission was performed.
+
 ## License and contribution rights
 
 Copyright © 2026 Artemiy Kirillov. Licensed under [PolyForm Noncommercial 1.0.0](LICENSE.md). Kaigi is source-available; commercial use requires separate authorization. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). Preserve all copyright/license notices.
 
-No MeetingBar code/assets or third-party package dependencies are used. Provider artwork remains separately owned: preserve the [provider notices](Kaigi/Resources/ProviderArtworkNotices.txt) and bundled Microsoft Fabric Assets license. Apple's Calendar artwork is rendered locally and is not redistributed.
+No MeetingBar code/assets are used. Firebase is integrated through the existing Swift Package Manager dependency; preserve its and its transitive dependencies’ license notices. Provider artwork remains separately owned: preserve the [provider notices](Kaigi/Resources/ProviderArtworkNotices.txt) and bundled Microsoft Fabric Assets license. Apple's Calendar artwork is rendered locally and is not redistributed.

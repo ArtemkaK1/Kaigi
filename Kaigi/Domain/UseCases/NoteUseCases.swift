@@ -2,17 +2,23 @@ import Foundation
 
 @MainActor struct NoteUseCases {
     let store: any NotesStore
+
     func note(_ id: NoteID) throws -> NoteRecord {
         guard let note = try store.fetchNote(id: id) else { throw CalendarDomainError.missingNote }; return note
     }
+
     func save(_ id: NoteID, text: String, reason: String = "Edit") throws -> NoteRecord { try store.saveDraft(id: id, text: text, reason: reason) }
+
     func revisions(_ id: NoteID) throws -> [RevisionRecord] { try store.fetchRevisions(id: id) }
+
     func restore(_ revision: RevisionRecord) throws -> NoteRecord { try save(revision.noteID, text: revision.text, reason: "Restore revision") }
+
     func document(_ id: NoteID, draft: String? = nil, includeContext: Bool = true) throws -> MarkdownDocument {
         let note = try note(id)
         let context = includeContext ? "\n\n## Confirmed context\n\n\(note.confirmedContext)\n" : "\n"
         return MarkdownDocument(text: "# \(note.title)\n\n\(note.start.formatted(date: .complete, time: .shortened))\n\n\(draft ?? note.text)\(context)", filename: "Kaigi-note.md")
     }
+
     func badges(for meetings: [Meeting]) throws -> NoteBadges {
         let notes = try store.fetchNotes()
         let series = Dictionary(uniqueKeysWithValues: try store.fetchSeries().map { ($0.externalKey, $0) })
@@ -23,32 +29,42 @@ import Foundation
         }.map(\.occurrenceKey))
         return NoteBadges(notes: noteKeys, previousContext: contextKeys)
     }
+
     func recovered(in day: DateInterval, excluding keys: Set<String>) throws -> [NoteRecord] {
         try store.fetchNotes().filter {
             $0.start >= day.start && $0.start < day.end && !keys.contains($0.occurrenceKey) && (!$0.text.isEmpty || !$0.confirmedContext.isEmpty)
         }
     }
+
     func history(of note: NoteRecord) throws -> [NoteRecord] {
         try store.fetchNotes().filter { $0.seriesID == note.seriesID && $0.id != note.id }.sorted { $0.start > $1.start }
     }
+
     func flush() throws { try store.flush() }
 }
 @MainActor struct MeetingSelectionUseCase {
     let store: any NotesStore
+
     func select(_ event: CalendarEvent) throws -> NoteRecord { try store.openNote(for: event) }
 }
 @MainActor struct MeetingContextUseCase {
     let store: any NotesStore
+
     func previous(for note: NoteRecord) throws -> [NoteRecord] {
         try store.fetchNotes().filter { $0.seriesID == note.seriesID && $0.id != note.id && $0.start < note.start && !$0.confirmedContext.isEmpty }
     }
+
     func confirm(_ id: NoteID, text: String) throws -> NoteRecord { try store.confirmContext(id: id, text: text) }
+
     func enabled(for note: NoteRecord) throws -> Bool { try store.fetchSeries().first { $0.id == note.seriesID }?.carryContext ?? false }
+
     func enabled(for meeting: Meeting) throws -> Bool { try store.contextEnabled(for: meeting) }
+
     func setEnabled(_ value: Bool, for meeting: Meeting) throws { try store.setContextEnabled(value, for: meeting) }
 }
 @MainActor struct ConferenceJoinUseCase {
     let opener: any LinkOpening
+
     func join(_ link: MeetingLink) throws {
         guard let safe = MeetingLinkResolver.validated(link.url) else { throw RefinementFailure(message: "This meeting URL is not a safe HTTPS link.") }
         try opener.open(safe)
@@ -62,6 +78,7 @@ struct AgendaResult: Sendable { let meetings: [Meeting]; let recovered: [NoteRec
     let preferences: any PreferencesService
     let sample: Bool
     var features: FeatureToggles = .appStoreFree
+
     func load(day: DateInterval) async throws -> AgendaResult {
         await coordinator.prepare()
         try Task.checkCancellation()

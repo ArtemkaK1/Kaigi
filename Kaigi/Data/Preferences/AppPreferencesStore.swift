@@ -2,6 +2,7 @@ import Foundation
 
 @MainActor final class AppPreferencesStore: CalendarPreferences, OnboardingPreferences {
     private let defaults: UserDefaults
+
     init(defaults: UserDefaults) { self.defaults = defaults }
     var selectedCalendarIDs: Set<CalendarID>? {
         get { defaults.stringArray(forKey: "selectedCalendars").map { Set($0.map { CalendarID(rawValue: $0) }) } }
@@ -9,6 +10,10 @@ import Foundation
             if let newValue { defaults.set(newValue.map(\.rawValue).sorted(), forKey: "selectedCalendars") }
             else { defaults.removeObject(forKey: "selectedCalendars") }
         }
+    }
+    var analyticsOnboardingStarted: Bool {
+        get { defaults.bool(forKey: "analytics.onboardingStarted.v1") }
+        set { defaults.set(newValue, forKey: "analytics.onboardingStarted.v1") }
     }
     var onboardingProgress: OnboardingProgress? {
         get { defaults.data(forKey: "calendarOnboarding.v1").flatMap { try? JSONDecoder().decode(OnboardingProgress.self, from: $0) } }

@@ -17,7 +17,7 @@ Views → ViewModels → Domain use cases/services → repository/provider proto
 
 ## Design and validation
 
-Every SwiftUI View modifier must start on its own line, including the first modifier. Never chain multiple View modifiers on the same line.
+Every SwiftUI View modifier must start on its own line, including the first modifier. Never chain multiple View modifiers on the same line. Separate Swift function/init/deinit declarations from preceding members with one blank line, before attached documentation/attributes; run `python3 Tools/verify-swift-spacing.py`.
 
 All authored stack spacing/padding uses AppSpacing (0/8/16/24/32/40/48). Feature Views use `.appText` and adaptive purple/neutral AppColors. Use one `KaigiButtonStyle` hierarchy: primary purple fill, secondary contrasting neutral fill, tertiary borderless actions. Four scaled native font roles: 11/13/16/20; only regular/medium/semibold. Intrinsic controls, borders and sizing metrics are separate documented geometry tokens. Keep the main agenda single-day, compact, and keyboard/VoiceOver operable. Size the agenda panel from rendered content with a bounded scroll viewport; do not restore estimated row-count heights or hidden titlebar space. Notes belong to meeting occurrences and their history; do not reintroduce a standalone notes browser.
 

@@ -7,13 +7,20 @@ import UniformTypeIdentifiers
     }
 }
 @MainActor struct MarkdownExporter {
-    func export(_ document: MarkdownDocument) async throws {
+    func export(_ document: MarkdownDocument) async throws -> ExportOutcome {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
         panel.nameFieldStringValue = document.filename
         let response = await withCheckedContinuation { continuation in panel.begin { continuation.resume(returning: $0) } }
-        guard response == .OK, let url = panel.url else { return }
+        guard response == .OK else { return .cancelled }
+        guard let url = panel.url else { throw CocoaError(.fileWriteUnknown) }
+        return try write(document, to: url)
+    }
+
+    /// Shared with deterministic filesystem tests; success follows the actual write.
+    func write(_ document: MarkdownDocument, to url: URL) throws -> ExportOutcome {
         try document.text.write(to: url, atomically: true, encoding: .utf8)
+        return .success
     }
 }
 

@@ -4,8 +4,11 @@ import ServiceManagement
 
 @MainActor protocol NotificationCenterClient {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
+
     func removeAllPendingNotificationRequests()
+
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+
     func add(_ request: UNNotificationRequest) async throws
 }
 extension UNUserNotificationCenter: NotificationCenterClient {}
@@ -15,6 +18,7 @@ extension UNUserNotificationCenter: NotificationCenterClient {}
     var remindersEnabled: Bool
     private let notifications: any NotificationCenterClient
     var aiEnabled: Bool { didSet { defaults.set(aiEnabled, forKey: "aiEnabled") } }
+
     init(defaults: UserDefaults, notifications: any NotificationCenterClient) {
         self.defaults = defaults; self.notifications = notifications
         remindersEnabled = defaults.bool(forKey: "remindersEnabled")
@@ -23,10 +27,12 @@ extension UNUserNotificationCenter: NotificationCenterClient {}
     var launchAtLogin: Bool { SMAppService.mainApp.status == .enabled }
     var message: String?
     private var scheduleGeneration = 0
+
     func setLaunchAtLogin(_ value: Bool) {
         do { if value { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
         catch { message = "Launch at login: \(error.localizedDescription)" }
     }
+
     func setReminders(_ enabled: Bool) async {
         scheduleGeneration += 1
         do {
@@ -36,6 +42,7 @@ extension UNUserNotificationCenter: NotificationCenterClient {}
             message = enabled && !remindersEnabled ? "Notifications are disabled. Allow them in System Settings." : nil
         } catch { message = error.localizedDescription }
     }
+
     func schedule(_ meetings: [Meeting], now: Date = .now) async {
         guard remindersEnabled else { return }
         scheduleGeneration += 1

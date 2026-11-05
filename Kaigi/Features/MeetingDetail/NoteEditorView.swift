@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NoteEditorView: View {
     @Bindable var model: MeetingDetailViewModel
+    @State private var editorSession = UUID()
     var back: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -40,7 +41,7 @@ struct NoteEditorView: View {
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
-                TextEditor(text: Binding(get: { model.text }, set: model.updateText))
+                TextEditor(text: Binding(get: { model.text }, set: { model.updateText($0, session: editorSession) }))
                     .appText(.body)
                     .scrollContentBackground(.hidden)
                     .padding(AppSpacing.xs)
@@ -156,5 +157,7 @@ struct NoteEditorView: View {
         .padding(AppSpacing.sm)
         .background(AppColors.background)
         .foregroundStyle(AppColors.primary)
+        .onAppear { model.editorPresented(editorSession) }
+        .onDisappear { model.editorDismissed(editorSession) }
     }
 }

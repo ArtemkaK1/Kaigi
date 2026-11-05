@@ -4,6 +4,7 @@ import Observation
 struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; let note: NoteRecord? }
 
 @MainActor @Observable final class AgendaViewModel {
+    private let analytics: any AnalyticsTracking
     let features: FeatureToggles
     private let useCase: AgendaUseCase
     private let selection: MeetingSelectionUseCase
@@ -28,27 +29,44 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
     }
     var weekday: String { day.date.formatted(.dateTime.weekday(.wide)) }
     var fullDate: String { day.date.formatted(.dateTime.day().month(.wide).year()) }
-    init(useCase: AgendaUseCase, selection: MeetingSelectionUseCase, join: ConferenceJoinUseCase, actions: any ApplicationActions, features: FeatureToggles = .appStoreFree, detailFactory: @escaping (NoteRecord, Meeting?) -> MeetingDetailViewModel) {
+
+    init(useCase: AgendaUseCase, selection: MeetingSelectionUseCase, join: ConferenceJoinUseCase, actions: any ApplicationActions, features: FeatureToggles = .appStoreFree, analytics: any AnalyticsTracking, detailFactory: @escaping (NoteRecord, Meeting?) -> MeetingDetailViewModel) {
+        self.analytics = analytics
         self.features = features
         self.useCase = useCase; self.selection = selection; joinUseCase = join; self.actions = actions
         self.detailFactory = detailFactory
         useCase.coordinator.observe { [weak self] in self?.refresh() }
     }
+
     func notesChanged() {
         do { let badges = try useCase.notes.badges(for: meetings); noteKeys = badges.notes; contextKeys = features.isEnabled(.recurringContext) ? badges.previousContext : [] }
         catch { self.error = error.localizedDescription }
     }
-    func move(_ days: Int) { day.move(days); refresh() }
-    func today() { day.date = .now; refresh() }
+
+    func move(_ days: Int) {
+        day.move(days)
+        if days != 0 { analytics.track(.agendaDayChanged(days < 0 ? .previous : .next)) }
+        refresh()
+    }
+
+    func today() {
+        let changed = !day.calendar.isDateInToday(day.date)
+        day.date = .now
+        if changed { analytics.track(.agendaDayChanged(.today)) }
+        refresh()
+    }
+
     func showToday() {
         // EventKit changes already refresh today's agenda. Opening the panel must
         // not cancel an in-flight initial load or repeat the same calendar reads.
-        if !day.calendar.isDateInToday(day.date) { today() }
+        if !day.calendar.isDateInToday(day.date) { day.date = .now; refresh() }
     }
+
     func refresh() {
         loadTask?.cancel()
         loadTask = Task { [weak self] in await self?.load() }
     }
+
     func load() async {
         loadGeneration += 1; let generation = loadGeneration
         day.calendar = .current; loading = true
@@ -61,18 +79,26 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
         catch { guard generation == loadGeneration else { return }; self.error = error.localizedDescription }
         loading = false
     }
+
     func select(_ meeting: Meeting) {
+        analytics.track(.agendaMeetingOpened)
         do { let note = try selection.select(meeting); selectedMeeting = meeting; selected = note; detail = detailFactory(note, meeting) }
         catch { self.error = error.localizedDescription }
     }
+
     func selectRecovered(_ record: NoteRecord) {
+        analytics.track(.agendaRecoveredNoteOpened)
         do {
             let note = try useCase.notes.note(record.id)
             selectedMeeting = nil; selected = note; detail = detailFactory(note, nil)
         } catch { self.error = error.localizedDescription }
     }
+
     func back() { detail = nil; selected = nil; selectedMeeting = nil; refresh() }
-    func join(_ link: MeetingLink) { do { try joinUseCase.join(link) } catch { self.error = error.localizedDescription } }
+
+    func join(_ link: MeetingLink) { analytics.track(.agendaJoinTapped); do { try joinUseCase.join(link) } catch { self.error = error.localizedDescription } }
+
     func connect() { guard features.isEnabled(.calendarManagement) else { return }; actions.showAccounts() }
+
     func dismissError() { error = nil }
 }

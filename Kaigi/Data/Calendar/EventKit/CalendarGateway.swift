@@ -7,7 +7,9 @@ nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, de
     var access: CalendarAccess { get }
     var calendars: [CalendarChoice] { get }
     var onChange: (() -> Void)? { get set }
+
     func requestAccess() async throws
+
     func meetings(in interval: DateInterval, calendarIDs: Set<String>) async throws -> [Meeting]
 }
 
@@ -23,12 +25,16 @@ nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, de
     var onChange: (() -> Void)?
     var kind: CalendarProviderKind { .system }
     var connectionState: AccountConnectionState { access == .allowed ? .connected : access == .denied ? .permissionDenied : .notConnected }
+
     init(empty: Bool = false, meetingCount: Int = 3, calendarCount: Int = 1, longTitles: Bool = false) {
         self.empty = empty; self.meetingCount = meetingCount; self.longTitles = longTitles
         calendars = (0..<calendarCount).map { CalendarChoice(id: $0 == 0 ? "sample" : "sample-\($0)", title: $0 == 0 ? "Sample calendar" : "Calendar \($0 + 1)") }
     }
+
     func requestAccess() async throws { access = .allowed }
+
     func connect() async throws { try await requestAccess() }
+
     func catalog() -> CalendarCatalog {
         guard access == .allowed else { return .empty }
         #if DEBUG
@@ -42,9 +48,11 @@ nonisolated enum CalendarAccess: Equatable, Sendable { case unknown, allowed, de
         }
         return CalendarCatalog(accounts: accounts, calendars: descriptors)
     }
+
     func events(in interval: DateInterval, visibleCalendarIDs: Set<CalendarID>) async throws -> [CalendarEvent] {
         try meetings(in: interval, calendarIDs: Set(visibleCalendarIDs.map(\.rawValue)))
     }
+
     func meetings(in interval: DateInterval, calendarIDs: Set<String>) throws -> [Meeting] {
         guard !empty, access == .allowed, calendarIDs.contains("sample") else { return [] }
         var calendarName = "Sample calendar"
@@ -74,8 +82,11 @@ private actor EventKitReader {
         default: return .denied
         }
     }
+
     func snapshot() -> (CalendarAccess, CalendarCatalog) { (access, catalog()) }
+
     func requestAccess() async throws { _ = try await store.requestFullAccessToEvents() }
+
     func meetings(in interval: DateInterval, calendarIDs: Set<String>) throws -> [Meeting] {
         StartupTrace.mark("events.begin")
         defer { StartupTrace.mark("events.end") }
@@ -96,6 +107,7 @@ private actor EventKitReader {
             return EventNormalizer().normalize(meeting, canceled: event.status == .canceled, declined: (event.attendees ?? []).contains { $0.isCurrentUser && $0.participantStatus == .declined }, interval: interval)
         }
     }
+
     func catalog() -> CalendarCatalog {
         StartupTrace.mark("catalog.begin")
         defer { StartupTrace.mark("catalog.end") }
@@ -130,6 +142,7 @@ private actor EventKitReader {
     var connectionState: AccountConnectionState {
         switch access { case .allowed: .connected; case .denied: .permissionDenied; case .unknown: .notConnected }
     }
+
     init() {
         StartupTrace.mark("eventkit.created")
         observers.append(NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: nil, queue: .main) { [weak self] _ in
@@ -144,7 +157,9 @@ private actor EventKitReader {
             }
         })
     }
+
     deinit { for observer in observers { NotificationCenter.default.removeObserver(observer) } }
+
     func prepare() async {
         while !prepared {
             let generation = catalogGeneration
@@ -154,6 +169,7 @@ private actor EventKitReader {
             cachedAccess = value.0; cachedCatalog = value.1; prepared = true; catalogTask = nil
         }
     }
+
     private func invalidate() {
         catalogGeneration += 1; prepared = false; catalogTask = nil
         let generation = catalogGeneration
@@ -163,17 +179,22 @@ private actor EventKitReader {
             onChange?()
         }
     }
+
     func requestAccess() async throws {
         try await reader.requestAccess()
         catalogGeneration += 1; prepared = false; catalogTask = nil
         await prepare()
     }
+
     func connect() async throws { try await requestAccess() }
+
     func catalog() -> CalendarCatalog { access == .allowed ? cachedCatalog : .empty }
+
     func meetings(in interval: DateInterval, calendarIDs: Set<String>) async throws -> [Meeting] {
         await prepare(); try Task.checkCancellation()
         return try await reader.meetings(in: interval, calendarIDs: calendarIDs)
     }
+
     func events(in interval: DateInterval, visibleCalendarIDs: Set<CalendarID>) async throws -> [CalendarEvent] {
         try await meetings(in: interval, calendarIDs: Set(visibleCalendarIDs.map(\.rawValue)))
     }

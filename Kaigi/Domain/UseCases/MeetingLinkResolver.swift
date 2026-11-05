@@ -8,6 +8,7 @@ nonisolated struct MeetingLinkResolver {
               !host.split(separator: ".").allSatisfy({ Int($0) != nil }) else { return nil }
         return url
     }
+
     static func provider(for host: String, path: String) -> String? {
         func domain(_ value: String) -> Bool { host == value || host.hasSuffix("." + value) }
         if host == "meet.google.com", path.count > 1 { return "Google Meet" }
@@ -16,6 +17,7 @@ nonisolated struct MeetingLinkResolver {
         if domain("webex.com"), path.count > 1 { return "Webex" }
         return nil
     }
+
     func resolve(url: URL?, location: String?, notes: String?) -> [MeetingLink] {
         var candidates = url.map { [$0] } ?? []
         let text = [location, notes].compactMap { $0 }.joined(separator: "\n")

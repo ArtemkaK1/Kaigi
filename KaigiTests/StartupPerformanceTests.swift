@@ -13,7 +13,7 @@ import Testing
         let coordinator = CalendarAccountCoordinator(providers: [provider])
         let visibility = CalendarVisibilityUseCase(preferences: preferences, coordinator: coordinator)
         let useCase = AgendaUseCase(coordinator: coordinator, visibility: visibility, notes: fixture.container.noteUseCases, preferences: fixture.system, sample: true)
-        let model = AgendaViewModel(useCase: useCase, selection: MeetingSelectionUseCase(store: fixture.store), join: ConferenceJoinUseCase(opener: fixture.actions), actions: fixture.actions, detailFactory: { note, meeting in fixture.container.detail(note: note, meeting: meeting) })
+        let model = AgendaViewModel(useCase: useCase, selection: MeetingSelectionUseCase(store: fixture.store), join: ConferenceJoinUseCase(opener: fixture.actions), actions: fixture.actions, analytics: NoOpAnalyticsTracker(), detailFactory: { note, meeting in fixture.container.detail(note: note, meeting: meeting) })
         let load = Task { await model.load() }
         for _ in 0..<100 where provider.pending == nil { await Task.yield() }
         #expect(provider.pending != nil)
@@ -55,11 +55,17 @@ import Testing
     var pending: CheckedContinuation<Void, Never>?
     var ready: Bool
     var eventQueries = 0
+
     init(holdPreparation: Bool) { ready = !holdPreparation }
+
     func prepare() async { if !ready { await withCheckedContinuation { pending = $0 } } }
+
     func finishPreparation() { ready = true; let continuation = pending; pending = nil; continuation?.resume() }
+
     func catalog() -> CalendarCatalog { ready ? base.catalog() : .empty }
+
     func connect() async throws {}
+
     func events(in interval: DateInterval, visibleCalendarIDs: Set<CalendarID>) async throws -> [CalendarEvent] {
         eventQueries += 1
         return try await base.events(in: interval, visibleCalendarIDs: visibleCalendarIDs)

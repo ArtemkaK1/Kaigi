@@ -28,6 +28,7 @@ struct CalendarAccountsView: View {
 }
 struct ProviderConnectionsView: View {
     @Bindable var model: CalendarAccountsViewModel
+    var connect: ((CalendarProviderKind) -> Void)? = nil
     @Environment(\.dynamicTypeSize) private var textSize
     private var iconColumn: CGFloat { AppLayout.providerIconColumn * AppTypography.scale(for: textSize) }
     var body: some View {
@@ -65,7 +66,7 @@ struct ProviderConnectionsView: View {
                                                 .fixedSize(horizontal: false, vertical: true)
                                                 .accessibilityIdentifier("provider-status-\(card.kind.rawValue)")
                                             if card.canConnect {
-                                                Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { model.requestConnection(card.kind) })
+                                                Button(card.state == .permissionDenied ? "Open Privacy Settings" : "Connect", action: { if let connect { connect(card.kind) } else { model.requestConnection(card.kind) } })
                                                     .buttonStyle(KaigiButtonStyle())
                                                     .disabled(model.connecting)
                                                     .accessibilityLabel(card.state == .permissionDenied ? "Open calendar privacy settings" : "Connect \(card.kind.title)")

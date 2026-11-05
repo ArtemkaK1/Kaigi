@@ -18,6 +18,7 @@ struct Meeting: Identifiable, Hashable, Sendable {
     // Never match across calendars or by a title/time similarity heuristic.
     var seriesKey: String { MeetingAssociation.seriesKey(calendarID: calendarID, externalID: externalID, provider: providerKind, accountID: accountID) }
     var occurrenceKey: String { MeetingAssociation.occurrenceKey(seriesKey: seriesKey, recurring: recurring, originalStart: originalStart) }
+
     nonisolated func overlaps(_ interval: DateInterval) -> Bool { start < interval.end && end > interval.start }
 }
 
@@ -37,5 +38,6 @@ struct DaySelection {
     var date: Date
     var calendar: Calendar = .current
     var interval: DateInterval { calendar.dateInterval(of: .day, for: date)! }
+
     mutating func move(_ days: Int) { date = calendar.date(byAdding: .day, value: days, to: date)! }
 }

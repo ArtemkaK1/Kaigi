@@ -1,6 +1,7 @@
 import Foundation
 
 @MainActor final class DependencyContainer {
+    let analytics: any AnalyticsTracking
     let features: FeatureToggles
     let coordinator: CalendarAccountCoordinator
     let visibility: CalendarVisibilityUseCase
@@ -15,7 +16,9 @@ import Foundation
     private let actions: any ApplicationActions
     private var detailModels: [NoteID: MeetingDetailViewModel] = [:]
     private(set) var agenda: AgendaViewModel!
-    init(providers: [any CalendarProvider], store: any NotesStore, preferences: AppPreferencesStore, systemPreferences: any PreferencesService, ai: any AIRefinementService, opener: any LinkOpening, permissionSettings: any PermissionSettingsOpening, actions: any ApplicationActions, sample: Bool, suppressOnboarding: Bool, features: FeatureToggles = .appStoreFree, closeOnboarding: @escaping () -> Void) throws {
+
+    init(providers: [any CalendarProvider], store: any NotesStore, preferences: AppPreferencesStore, systemPreferences: any PreferencesService, ai: any AIRefinementService, opener: any LinkOpening, permissionSettings: any PermissionSettingsOpening, actions: any ApplicationActions, sample: Bool, suppressOnboarding: Bool, features: FeatureToggles = .appStoreFree, analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), closeOnboarding: @escaping () -> Void) throws {
+        self.analytics = analytics
         self.features = features
         self.actions = actions; self.ai = ai; self.systemPreferences = systemPreferences
         coordinator = CalendarAccountCoordinator(providers: providers)
@@ -28,27 +31,30 @@ import Foundation
             let returningUser = preferences.selectedCalendarIDs != nil || hasNotes
             preferences.onboardingProgress = OnboardingProgress(stage: .welcome, disposition: returningUser || suppressOnboarding ? .completed : .inProgress)
         }
-        accounts = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: permissionSettings)
-        onboarding = OnboardingViewModel(preferences: preferences, accounts: accounts, closeWindow: closeOnboarding)
+        accounts = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: permissionSettings, features: features, analytics: analytics)
+        onboarding = OnboardingViewModel(preferences: preferences, accounts: accounts, analytics: analytics, closeWindow: closeOnboarding)
         var refreshAgenda: (() -> Void)?
-        settings = SettingsViewModel(service: systemPreferences, actions: actions, features: features, onChanged: { refreshAgenda?() })
+        settings = SettingsViewModel(service: systemPreferences, actions: actions, features: features, analytics: analytics, onChanged: { refreshAgenda?() })
         let agendaUseCase = AgendaUseCase(coordinator: coordinator, visibility: visibility, notes: noteUseCases, preferences: systemPreferences, sample: sample, features: features)
-        agenda = AgendaViewModel(useCase: agendaUseCase, selection: MeetingSelectionUseCase(store: store), join: joinUseCase, actions: actions, features: features, detailFactory: { [unowned self] note, meeting in self.detail(note: note, meeting: meeting) })
+        agenda = AgendaViewModel(useCase: agendaUseCase, selection: MeetingSelectionUseCase(store: store), join: joinUseCase, actions: actions, features: features, analytics: analytics, detailFactory: { [unowned self] note, meeting in self.detail(note: note, meeting: meeting) })
         refreshAgenda = { [weak self] in
             self?.agenda.refresh()
             self?.detailModels.values.forEach { $0.refreshPreferences() }
         }
         agenda.refresh()
     }
+
     func detail(note: NoteRecord, meeting: Meeting?) -> MeetingDetailViewModel {
         if let existing = detailModels[note.id] { if let meeting { existing.updateMeeting(meeting) }; existing.reloadContext(); return existing }
-        let model = MeetingDetailViewModel(note: note, meeting: meeting, notes: noteUseCases, context: contextUseCase, ai: ai, preferences: systemPreferences, join: joinUseCase, actions: actions, features: features, onSaved: { [weak self, seriesID = note.seriesID] in
+        let model = MeetingDetailViewModel(note: note, meeting: meeting, notes: noteUseCases, context: contextUseCase, ai: ai, preferences: systemPreferences, join: joinUseCase, actions: actions, features: features, analytics: analytics, onSaved: { [weak self, seriesID = note.seriesID] in
             self?.agenda.notesChanged()
             self?.detailModels.values.filter { $0.note.seriesID == seriesID }.forEach { $0.reloadContext() }
         })
         detailModels[note.id] = model; return model
     }
+
     func detail(id: NoteID) throws -> MeetingDetailViewModel { detail(note: try noteUseCases.note(id), meeting: nil) }
+
     func flushDrafts() throws {
         for detail in detailModels.values { try detail.flushDraft() }
         try noteUseCases.flush()
