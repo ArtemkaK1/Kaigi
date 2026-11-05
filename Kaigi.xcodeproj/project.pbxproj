@@ -6,6 +6,12 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BA53404A309C040D00211539 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = BA534049309C040D00211539 /* FirebaseAnalytics */; };
+		BA53404C309C040D00211539 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BA53404B309C040D00211539 /* FirebaseCore */; };
+		BA53404E309C040D00211539 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = BA53404D309C040D00211539 /* FirebaseCrashlytics */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		BA99ED7D308C095900597854 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -51,6 +57,9 @@
 		BA99ED6C308C095700597854 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				BA53404E309C040D00211539 /* FirebaseCrashlytics in Frameworks */,
+				BA53404C309C040D00211539 /* FirebaseCore in Frameworks */,
+				BA53404A309C040D00211539 /* FirebaseAnalytics in Frameworks */,
 			);
 		};
 		BA99ED79308C095900597854 /* Frameworks */ = {
@@ -103,6 +112,11 @@
 				BA99ED71308C095700597854 /* Kaigi */,
 			);
 			name = Kaigi;
+			packageProductDependencies = (
+				BA534049309C040D00211539 /* FirebaseAnalytics */,
+				BA53404B309C040D00211539 /* FirebaseCore */,
+				BA53404D309C040D00211539 /* FirebaseCrashlytics */,
+			);
 			productName = Kaigi;
 			productReference = BA99ED6F308C095700597854 /* Kaigi.app */;
 			productType = "com.apple.product-type.application";
@@ -181,6 +195,9 @@
 			);
 			mainGroup = BA99ED66308C095700597854;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BA99ED70308C095700597854 /* Products */;
 			projectDirPath = "";
@@ -556,6 +573,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BA534049309C040D00211539 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		BA53404B309C040D00211539 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		BA53404D309C040D00211539 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BA99ED67308C095700597854 /* Project object */;
 	validationLevel = 1;
