@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		BA53404A309C040D00211539 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = BA534049309C040D00211539 /* FirebaseAnalyticsCore */; };
 		BA53404C309C040D00211539 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BA53404B309C040D00211539 /* FirebaseCore */; };
+		F17500000000000000000001 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = F17500000000000000000002 /* FirebaseCrashlytics */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				BA53404C309C040D00211539 /* FirebaseCore in Frameworks */,
+				F17500000000000000000001 /* FirebaseCrashlytics in Frameworks */,
 				BA53404A309C040D00211539 /* FirebaseAnalyticsCore in Frameworks */,
 			);
 		};
@@ -104,6 +106,7 @@
 				BA99ED6B308C095700597854 /* Sources */,
 				BA99ED6C308C095700597854 /* Frameworks */,
 				BA99ED6D308C095700597854 /* Resources */,
+				F17500000000000000000003 /* Crashlytics symbols (opt-in archives) */,
 			);
 			buildRules = (
 			);
@@ -114,6 +117,7 @@
 			packageProductDependencies = (
 				BA534049309C040D00211539 /* FirebaseAnalyticsCore */,
 				BA53404B309C040D00211539 /* FirebaseCore */,
+				F17500000000000000000002 /* FirebaseCrashlytics */,
 			);
 			productName = Kaigi;
 			productReference = BA99ED6F308C095700597854 /* Kaigi.app */;
@@ -238,6 +242,24 @@
 			shellPath = /bin/sh;
 			shellScript = (
 				"/usr/bin/python3 \"$SRCROOT/Tools/validate-firebase-config.py\" \"$SRCROOT/Kaigi/GoogleService-Info.plist\"",
+			);
+		};
+		F17500000000000000000003 /* Crashlytics symbols (opt-in archives) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			inputFileListPaths = (
+				"$(SRCROOT)/Configuration/Crashlytics-$(CONFIGURATION).xcfilelist",
+			);
+			inputPaths = (
+				"$(SRCROOT)/Tools/upload-crashlytics-symbols.sh",
+				"$(FIREBASE_SPM_CHECKOUT_DIR)/Crashlytics/run",
+				"$(FIREBASE_SPM_CHECKOUT_DIR)/Crashlytics/upload-symbols",
+			);
+			name = "Crashlytics symbols (opt-in archives)";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = (
+				"/bin/sh \"$SRCROOT/Tools/upload-crashlytics-symbols.sh\"",
 			);
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -403,11 +425,13 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 4;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = WX557M9HD2;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
+				FIREBASE_SPM_CHECKOUT_DIR = "$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
@@ -415,11 +439,17 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
+				KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS = NO;
+				KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.kaigi;
 				PRODUCT_MODULE_NAME = Meetrail;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -443,11 +473,13 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 4;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = WX557M9HD2;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
+				FIREBASE_SPM_CHECKOUT_DIR = "$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
@@ -455,11 +487,17 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
+				KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS = NO;
+				KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.volrik.kaigi;
 				PRODUCT_MODULE_NAME = Meetrail;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -611,6 +649,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		F17500000000000000000002 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA534048309C040D00211539 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

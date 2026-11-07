@@ -24,13 +24,15 @@ result = subprocess.run(['codesign', '-d', '--entitlements', ':-', str(app)], ca
 entitlements = plistlib.loads(result.stdout)
 assert entitlements.get('com.apple.security.app-sandbox') is True
 assert entitlements.get('com.apple.security.network.client') is True
+assert entitlements.get('com.apple.security.personal-information.calendars') is True
+assert entitlements.get('com.apple.security.files.user-selected.read-write') is True
 assert not entitlements.get('com.apple.security.network.server', False)
 assert any(value.endswith('.com.volrik.kaigi') for value in entitlements.get('keychain-access-groups', [])), 'Missing app-scoped Keychain Sharing'
 for binary in list((app / 'Contents/MacOS').iterdir()) + list((app / 'Contents/Frameworks').glob('*.framework/Versions/A/*')):
     if not binary.is_file():
         continue
     linked = subprocess.run(['otool', '-L', str(binary)], capture_output=True, text=True, check=True).stdout
-    for forbidden in ['AdSupport', 'Crashlytics', 'GoogleAppMeasurementIdentitySupport', 'GoogleAdsOnDeviceConversion']:
+    for forbidden in ['AdSupport', 'FirebaseRemoteConfig.framework', 'FirebaseAuth.framework', 'FirebaseFirestore.framework', 'FirebasePerformance.framework', 'GoogleAppMeasurementIdentitySupport', 'GoogleAdsOnDeviceConversion']:
         assert forbidden not in linked and forbidden not in binary.name, f'Unexpected dependency: {forbidden}'
 if '--production' in sys.argv:
     assert not list(app.rglob('*.xctest')), 'Test bundle in production app'
