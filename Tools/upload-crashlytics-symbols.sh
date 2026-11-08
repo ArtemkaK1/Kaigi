@@ -2,6 +2,7 @@
 # The last Xcode build phase has the dSYM and app resources available.
 set -eu
 if [ "${KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY:-NO}" = YES ]; then
+    echo "Crashlytics: validating symbol inputs without uploading."
     set -- --build-phase --validate
 elif [ "${CONFIGURATION:-}" = Release ] && [ "${KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS:-NO}" = YES ]; then
     case "${ACTION:-}" in
@@ -18,8 +19,8 @@ fi
 
 sdk="${FIREBASE_SPM_CHECKOUT_DIR:-${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk}"
 uploader="$sdk/Crashlytics/upload-symbols"
-if [ ! -x "$uploader" ]; then
-    echo "error: Firebase SPM upload-symbols is missing. See Docs/Crashlytics.md."
+if [ ! -f "$uploader" ] || [ ! -x "$uploader" ]; then
+    printf 'error: Firebase SPM upload-symbols is missing or not executable at %s. Resolve packages or set FIREBASE_SPM_CHECKOUT_DIR to the Firebase checkout. See Docs/Crashlytics.md.\n' "$uploader" >&2
     exit 1
 fi
 

@@ -44,7 +44,16 @@ To investigate a UUID manually, use `xcrun dwarfdump --uuid` on the **exact ship
 
 The final build phase calls `Tools/upload-crashlytics-symbols.sh` with User Script Sandboxing enabled. The input lists declare the dSYM bundle, its main DWARF image and Info.plist, the bundled GoogleService-Info.plist, and the app executable. Debug adds the debug dylib’s DWARF image. The phase also declares the wrapper and SDK uploader as inputs. [Firebase’s Xcode input requirements](https://firebase.google.com/docs/crashlytics/ios/get-deobfuscated-reports)
 
-The default checkout path uses `$(SDK_STAT_CACHE_DIR)/SourcePackages/checkouts/firebase-ios-sdk`. Xcode 27 resolves that setting to the Derived Data root for both builds and archives. The old path based on walking up two levels from `BUILD_DIR` resolved inside ArchiveIntermediates during Archive. For an explicitly relocated SwiftPM cache, set `FIREBASE_SPM_CHECKOUT_DIR` to its Firebase checkout.
+The uploader comes from the resolved Firebase SwiftPM checkout. By default, Xcode derives its location from `BUILD_DIR`. Ordinary builds use `Build/Products` under the project’s Derived Data folder. Archives use `Build/Intermediates.noindex/ArchiveIntermediates/<scheme>/BuildProductsPath` under the same folder. The project setting selects the corresponding parent depth and declares the resolved uploader as a sandbox input. This follows the same layout as Firebase’s `${BUILD_DIR%/Build/*}/SourcePackages` lookup. The former `SDK_STAT_CACHE_DIR` setting pointed to the shared Derived Data folder during an IDE archive, one level above Kaigi’s SwiftPM checkout. [Firebase’s SwiftPM setup](https://firebase.google.com/docs/crashlytics/ios/get-started)
+
+Resolve dependencies with Xcode’s **File → Packages → Resolve Package Versions** or `xcodebuild -resolvePackageDependencies -project Kaigi.xcodeproj -scheme Kaigi -onlyUsePackageVersionsFromResolvedFile`. With the standard SwiftPM layout, this also works when CI sets `-derivedDataPath`. For a relocated SwiftPM cache or custom build products directory, set `FIREBASE_SPM_CHECKOUT_DIR` to the Firebase checkout. Pass it as an Xcode build setting so the wrapper and sandbox use the same path. This example validates a CI archive with a relocated package cache.
+
+```sh
+xcodebuild -project Kaigi.xcodeproj -scheme Kaigi -configuration Release \
+  -clonedSourcePackagesDirPath "$KAIGI_PACKAGE_CACHE" \
+  FIREBASE_SPM_CHECKOUT_DIR="$KAIGI_PACKAGE_CACHE/checkouts/firebase-ios-sdk" \
+  KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY=YES archive
+```
 
 Release Archive and explicit Release install actions upload automatically by default. The script executes Firebase’s `upload-symbols --build-phase` in the foreground so Xcode receives the uploader’s exit status. This is the upload command used by Firebase’s `run` wrapper, which normally starts it in the background. Build-phase mode uses the same Xcode inputs and deduplication. Ordinary Debug and Release builds and XCTest skip the upload. Set `KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS=NO` for offline staging, then upload the exact archive’s symbols manually.
 
@@ -97,6 +106,7 @@ This external mechanism has no binary trigger to remove after testing. It is not
 | UUID mismatch | Locate the original build's symbols. Matching app version alone is insufficient; never substitute a new rebuild. |
 | Wrong Firebase app | Run both bundle verifiers, confirm exactly one unmodified local config for `com.volrik.kaigi`, and select the corresponding Console app/project. Do not print configuration values. |
 | Missing GoogleService-Info.plist | Follow Analytics local setup. The early validator requires the intentionally ignored file; do not generate a fake config or add another resource copy. |
+| Firebase uploader missing or not executable | Check the path printed by the phase, resolve pinned SwiftPM packages, and set `FIREBASE_SPM_CHECKOUT_DIR` for a relocated checkout. |
 | Script sandbox denied access | Check the configuration-specific input list, resolved dSYM/executable/config paths, SDK tool inputs and cache override. Keep sandboxing enabled. Validation-only mode reproduces the real sandbox without upload. |
 | Upload skipped | Ordinary builds and tests skip uploads. For Archive, check the Release configuration and both Crashlytics build flags. |
 | Offline / failed network upload | Routine builds work offline with cached dependencies. A Release upload needs network; inspect private vendor logs and retry the exact dSYM manually after approval. |

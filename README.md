@@ -128,6 +128,8 @@ Xcode 27 built signed Debug and universal Release artifacts and a local developm
 
 The 75 unit tests, Crashlytics script tests, architecture and spacing checks, launch selectors, transfer tests and `git diff --check` passed. XCTest timed out while enabling macOS UI automation on both attempts, before the four selected UI cases could start. The compiler reported the existing FeatureToggles isolation and AppIntents metadata warnings. Live symbol upload, real crash delivery and symbolication in Firebase Console, App Store distribution signing, and macOS 15 runtime testing remain pending.
 
+The Crashlytics uploader lookup now follows the project-specific `BUILD_DIR` for both Build and Archive. Signed Debug and Release builds passed after resolving pinned packages into fresh Derived Data. Development-signed archives from Xcode’s default layout and the fresh layout both passed the sandboxed Firebase validation-only phase and matched the arm64 and x86_64 dSYM UUIDs. The 75 unit tests and agenda startup UI smoke test passed. Live symbol upload and Firebase Console receipt remain pending. See [the relocated SwiftPM cache example](Docs/Crashlytics.md#upload-workflow).
+
 ## License and contribution rights
 
 Copyright © 2026 Artemiy Kirillov. Licensed under [PolyForm Noncommercial 1.0.0](LICENSE.md). Kaigi is source-available; commercial use requires separate authorization. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). Preserve all copyright/license notices.

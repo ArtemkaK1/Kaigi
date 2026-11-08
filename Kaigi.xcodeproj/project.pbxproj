@@ -430,7 +430,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
-				FIREBASE_SPM_CHECKOUT_DIR = "$(SDK_STAT_CACHE_DIR)/SourcePackages/checkouts/firebase-ios-sdk";
+				FIREBASE_SPM_CHECKOUT_DIR = "$(KAIGI_SPM_ROOT_$(BUILD_DIR:file))/SourcePackages/checkouts/firebase-ios-sdk";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
@@ -439,6 +439,8 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
+				KAIGI_SPM_ROOT_BuildProductsPath = "$(BUILD_DIR)/../../../../..";
+				KAIGI_SPM_ROOT_Products = "$(BUILD_DIR)/../..";
 				KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS = NO;
 				KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -479,7 +481,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
-				FIREBASE_SPM_CHECKOUT_DIR = "$(SDK_STAT_CACHE_DIR)/SourcePackages/checkouts/firebase-ios-sdk";
+				FIREBASE_SPM_CHECKOUT_DIR = "$(KAIGI_SPM_ROOT_$(BUILD_DIR:file))/SourcePackages/checkouts/firebase-ios-sdk";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
@@ -488,6 +490,8 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
+				KAIGI_SPM_ROOT_BuildProductsPath = "$(BUILD_DIR)/../../../../..";
+				KAIGI_SPM_ROOT_Products = "$(BUILD_DIR)/../..";
 				KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS = YES;
 				KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY = NO;
 				LD_RUNPATH_SEARCH_PATHS = (

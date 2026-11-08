@@ -33,12 +33,16 @@ class CrashlyticsConfigurationTests(unittest.TestCase):
         phases = [objects[key] for key in target['buildPhases']]
         upload = phases[-1]
         self.assertEqual(upload['name'], 'Crashlytics symbols')
+        self.assertIn('$(FIREBASE_SPM_CHECKOUT_DIR)/Crashlytics/upload-symbols', upload['inputPaths'])
         self.assertEqual(sum('Crashlytics symbols' in value.get('name', '') for value in phases), 1)
         configs = objects[target['buildConfigurationList']]['buildConfigurations']
         for key in configs:
             configuration = objects[key]
             settings = configuration['buildSettings']
             self.assertEqual(settings['DEBUG_INFORMATION_FORMAT'], 'dwarf-with-dsym')
+            self.assertEqual(settings['FIREBASE_SPM_CHECKOUT_DIR'], '$(KAIGI_SPM_ROOT_$(BUILD_DIR:file))/SourcePackages/checkouts/firebase-ios-sdk')
+            self.assertEqual(settings['KAIGI_SPM_ROOT_Products'], '$(BUILD_DIR)/../..')
+            self.assertEqual(settings['KAIGI_SPM_ROOT_BuildProductsPath'], '$(BUILD_DIR)/../../../../..')
             self.assertEqual(settings['OTHER_LDFLAGS'], ['$(inherited)', '-ObjC'])
             self.assertEqual(settings['KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS'], 'YES' if configuration['name'] == 'Release' else 'NO')
             self.assertEqual(settings['KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY'], 'NO')
@@ -87,6 +91,12 @@ class CrashlyticsConfigurationTests(unittest.TestCase):
             marker = root / 'invoked'
             uploader.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$TEST_MARKER"\nexit "$TEST_EXIT"\n')
             uploader.chmod(0o755)
+            relocated = root / 'CI packages/checkouts/firebase-ios-sdk'
+            relocated_uploader = relocated / 'Crashlytics/upload-symbols'
+            relocated_uploader.parent.mkdir(parents=True)
+            relocated_uploader.write_bytes(uploader.read_bytes())
+            relocated_uploader.chmod(0o755)
+            missing = root / 'missing checkout'
             release = {'CONFIGURATION': 'Release', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'YES'}
             cases = [
                 ({'CONFIGURATION': 'Debug', 'ACTION': 'build'}, None, 0),
@@ -95,6 +105,8 @@ class CrashlyticsConfigurationTests(unittest.TestCase):
                 ({**release, 'ACTION': 'install', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'NO'}, None, 0),
                 ({**release, 'ACTION': 'install', 'XCTestBundlePath': 'synthetic'}, None, 1),
                 ({**release, 'ACTION': 'install'}, ['--build-phase'], 0),
+                ({**release, 'ACTION': 'install', 'FIREBASE_SPM_CHECKOUT_DIR': str(relocated)}, ['--build-phase'], 0),
+                ({**release, 'ACTION': 'install', 'FIREBASE_SPM_CHECKOUT_DIR': str(missing)}, None, 1),
                 ({**release, 'ACTION': 'archive', 'TEST_EXIT': '37'}, ['--build-phase'], 37),
                 ({**release, 'ACTION': 'install', 'KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY': 'YES'}, ['--build-phase', '--validate'], 0),
             ]
@@ -112,6 +124,8 @@ class CrashlyticsConfigurationTests(unittest.TestCase):
                     result = subprocess.run(['/bin/sh', str(ROOT / 'Tools/upload-crashlytics-symbols.sh')], env=environment, capture_output=True)
                     self.assertEqual(result.returncode, exit_code)
                     self.assertEqual(marker.exists(), arguments is not None)
+                    if overrides.get('FIREBASE_SPM_CHECKOUT_DIR') == str(missing):
+                        self.assertIn(str(missing / 'Crashlytics/upload-symbols'), result.stderr.decode())
                     if arguments is not None:
                         self.assertEqual(marker.read_text().splitlines(), arguments)
 
