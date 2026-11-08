@@ -122,6 +122,12 @@ python3 Tools/test-crashlytics.py
 python3 Tools/verify-crashlytics-bundle.py /path/to/Release/Kaigi.app /path/to/Release/Kaigi.app.dSYM --production
 ```
 
+## Crashlytics release audit — 8 November 2026
+
+Xcode 27 built signed Debug and universal Release artifacts and a local development-signed Release archive for 1.0 (4). The archive uses the default SwiftPM tool location and passed Firebase’s validation-only command with script sandboxing enabled. The bundle checks verified Crashlytics and Analytics, one matching Firebase configuration, the macOS exception setting, signed entitlements, bundled privacy manifests and matching arm64 and x86_64 dSYM UUIDs. Release archives and explicit Release install actions now run the Firebase uploader in the foreground. See [Crashlytics](Docs/Crashlytics.md) for offline staging and retry commands.
+
+The 75 unit tests, Crashlytics script tests, architecture and spacing checks, launch selectors, transfer tests and `git diff --check` passed. XCTest timed out while enabling macOS UI automation on both attempts, before the four selected UI cases could start. The compiler reported the existing FeatureToggles isolation and AppIntents metadata warnings. Live symbol upload, real crash delivery and symbolication in Firebase Console, App Store distribution signing, and macOS 15 runtime testing remain pending.
+
 ## License and contribution rights
 
 Copyright © 2026 Artemiy Kirillov. Licensed under [PolyForm Noncommercial 1.0.0](LICENSE.md). Kaigi is source-available; commercial use requires separate authorization. Contributor-rights agreements must be settled before merging outside work intended for commercial redistribution; see [CONTRIBUTING.md](CONTRIBUTING.md). Preserve all copyright/license notices.

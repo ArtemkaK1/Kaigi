@@ -32,14 +32,15 @@ class CrashlyticsConfigurationTests(unittest.TestCase):
         self.assertEqual(packages[0]['requirement']['minimumVersion'], '13.1.1')
         phases = [objects[key] for key in target['buildPhases']]
         upload = phases[-1]
-        self.assertEqual(upload['name'], 'Crashlytics symbols (opt-in archives)')
+        self.assertEqual(upload['name'], 'Crashlytics symbols')
         self.assertEqual(sum('Crashlytics symbols' in value.get('name', '') for value in phases), 1)
         configs = objects[target['buildConfigurationList']]['buildConfigurations']
         for key in configs:
-            settings = objects[key]['buildSettings']
+            configuration = objects[key]
+            settings = configuration['buildSettings']
             self.assertEqual(settings['DEBUG_INFORMATION_FORMAT'], 'dwarf-with-dsym')
             self.assertEqual(settings['OTHER_LDFLAGS'], ['$(inherited)', '-ObjC'])
-            self.assertEqual(settings['KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS'], 'NO')
+            self.assertEqual(settings['KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS'], 'YES' if configuration['name'] == 'Release' else 'NO')
             self.assertEqual(settings['KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY'], 'NO')
             self.assertNotEqual(settings.get('ENABLE_USER_SCRIPT_SANDBOXING'), 'NO')
             self.assertEqual(settings['INFOPLIST_FILE'], 'Configuration/Analytics-Info.plist')
@@ -79,34 +80,40 @@ class CrashlyticsConfigurationTests(unittest.TestCase):
 
     def test_upload_gates_never_invoke_a_real_uploader(self):
         with tempfile.TemporaryDirectory(prefix='kaigi-upload-policy-') as folder:
-            sdk = Path(folder)
-            (sdk / 'Crashlytics').mkdir()
-            marker = sdk / 'invoked'
-            for name in ['run', 'upload-symbols']:
-                tool = sdk / 'Crashlytics' / name
-                tool.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$TEST_MARKER"\n')
-                tool.chmod(0o755)
+            root = Path(folder)
+            sdk = root / 'SourcePackages/checkouts/firebase-ios-sdk'
+            uploader = sdk / 'Crashlytics/upload-symbols'
+            uploader.parent.mkdir(parents=True)
+            marker = root / 'invoked'
+            uploader.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$TEST_MARKER"\nexit "$TEST_EXIT"\n')
+            uploader.chmod(0o755)
+            release = {'CONFIGURATION': 'Release', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'YES'}
             cases = [
-                ({'CONFIGURATION': 'Debug', 'ACTION': 'build'}, False),
-                ({'CONFIGURATION': 'Debug', 'ACTION': 'install', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'YES'}, False),
-                ({'CONFIGURATION': 'Release', 'ACTION': 'build', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'YES'}, False),
-                ({'CONFIGURATION': 'Release', 'ACTION': 'install'}, False),
-                ({'CONFIGURATION': 'Release', 'ACTION': 'install', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'YES', 'XCTestBundlePath': 'synthetic'}, False),
-                ({'CONFIGURATION': 'Release', 'ACTION': 'install', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'YES'}, True),
-                ({'CONFIGURATION': 'Debug', 'ACTION': 'build', 'KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY': 'YES'}, True),
+                ({'CONFIGURATION': 'Debug', 'ACTION': 'build'}, None, 0),
+                ({**release, 'CONFIGURATION': 'Debug', 'ACTION': 'install'}, None, 0),
+                ({**release, 'ACTION': 'build'}, None, 0),
+                ({**release, 'ACTION': 'install', 'KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS': 'NO'}, None, 0),
+                ({**release, 'ACTION': 'install', 'XCTestBundlePath': 'synthetic'}, None, 1),
+                ({**release, 'ACTION': 'install'}, ['--build-phase'], 0),
+                ({**release, 'ACTION': 'archive', 'TEST_EXIT': '37'}, ['--build-phase'], 37),
+                ({**release, 'ACTION': 'install', 'KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY': 'YES'}, ['--build-phase', '--validate'], 0),
             ]
-            for overrides, invoked in cases:
-                marker.unlink(missing_ok=True)
-                # Clean environment: parent shells cannot accidentally enable upload.
-                environment = {'PATH': os.environ['PATH'], 'FIREBASE_SPM_CHECKOUT_DIR': str(sdk), 'TEST_MARKER': str(marker), **overrides}
-                result = subprocess.run(['/bin/sh', str(ROOT / 'Tools/upload-crashlytics-symbols.sh')], env=environment, capture_output=True)
-                self.assertEqual(marker.exists(), invoked)
-                if overrides.get('KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY') == 'YES':
-                    self.assertEqual(marker.read_text().splitlines(), ['--build-phase', '--validate'])
-                if 'XCTestBundlePath' in overrides:
-                    self.assertNotEqual(result.returncode, 0)
-                else:
-                    self.assertEqual(result.returncode, 0)
+            for overrides, arguments, exit_code in cases:
+                with self.subTest(overrides=overrides):
+                    marker.unlink(missing_ok=True)
+                    # Resolve the SDK from an archive layout without an override.
+                    environment = {
+                        'PATH': os.environ['PATH'],
+                        'BUILD_DIR': str(root / 'Build/Intermediates.noindex/ArchiveIntermediates/Kaigi/BuildProductsPath'),
+                        'TEST_MARKER': str(marker),
+                        'TEST_EXIT': '0',
+                        **overrides,
+                    }
+                    result = subprocess.run(['/bin/sh', str(ROOT / 'Tools/upload-crashlytics-symbols.sh')], env=environment, capture_output=True)
+                    self.assertEqual(result.returncode, exit_code)
+                    self.assertEqual(marker.exists(), arguments is not None)
+                    if arguments is not None:
+                        self.assertEqual(marker.read_text().splitlines(), arguments)
 
     def test_manual_tool_refuses_owner_and_automated_sessions(self):
         tool = load('crash_manual', 'crashlytics-verify-manually.py')

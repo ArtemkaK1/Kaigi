@@ -106,7 +106,7 @@
 				BA99ED6B308C095700597854 /* Sources */,
 				BA99ED6C308C095700597854 /* Frameworks */,
 				BA99ED6D308C095700597854 /* Resources */,
-				F17500000000000000000003 /* Crashlytics symbols (opt-in archives) */,
+				F17500000000000000000003 /* Crashlytics symbols */,
 			);
 			buildRules = (
 			);
@@ -244,7 +244,7 @@
 				"/usr/bin/python3 \"$SRCROOT/Tools/validate-firebase-config.py\" \"$SRCROOT/Kaigi/GoogleService-Info.plist\"",
 			);
 		};
-		F17500000000000000000003 /* Crashlytics symbols (opt-in archives) */ = {
+		F17500000000000000000003 /* Crashlytics symbols */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			inputFileListPaths = (
@@ -252,14 +252,13 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Tools/upload-crashlytics-symbols.sh",
-				"$(FIREBASE_SPM_CHECKOUT_DIR)/Crashlytics/run",
 				"$(FIREBASE_SPM_CHECKOUT_DIR)/Crashlytics/upload-symbols",
 			);
-			name = "Crashlytics symbols (opt-in archives)";
-			runOnlyForDeploymentPostprocessing = 0;
+			name = "Crashlytics symbols";
 			shellPath = /bin/sh;
 			shellScript = (
 				"/bin/sh \"$SRCROOT/Tools/upload-crashlytics-symbols.sh\"",
+				"",
 			);
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -424,17 +423,18 @@
 				CODE_SIGN_ENTITLEMENTS = Kaigi/Kaigi.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = WX557M9HD2;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
-				FIREBASE_SPM_CHECKOUT_DIR = "$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk";
+				FIREBASE_SPM_CHECKOUT_DIR = "$(SDK_STAT_CACHE_DIR)/SourcePackages/checkouts/firebase-ios-sdk";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
@@ -472,22 +472,23 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = WX557M9HD2;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
-				FIREBASE_SPM_CHECKOUT_DIR = "$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk";
+				FIREBASE_SPM_CHECKOUT_DIR = "$(SDK_STAT_CACHE_DIR)/SourcePackages/checkouts/firebase-ios-sdk";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Configuration/Analytics-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Kaigi;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Kaigi reads your calendars to show meetings and connect your private local notes. Kaigi never changes calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Artemiy Kirillov";
-				KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS = NO;
+				KAIGI_CRASHLYTICS_UPLOAD_SYMBOLS = YES;
 				KAIGI_CRASHLYTICS_VALIDATE_SYMBOLS_ONLY = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
