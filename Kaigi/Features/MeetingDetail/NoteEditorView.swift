@@ -6,17 +6,17 @@ struct NoteEditorView: View {
     var back: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            if back != nil || model.features.isEnabled(.markdownExport) {
+            if back != nil || model.access.allows(.markdownExport) {
                 HStack(spacing: AppSpacing.xs) {
                     if let back {
                         SymbolButton(symbol: "chevron.left", label: "Back to agenda", action: back)
                             .keyboardShortcut("[", modifiers: .command)
                     }
                     Spacer(minLength: AppSpacing.xs)
-                    if model.features.isEnabled(.markdownExport) {
+                    if model.access.allows(.markdownExport) {
                         SymbolButton(symbol: "square.and.arrow.up", label: "Export Markdown", action: model.export)
                     }
-                    if back != nil && model.features.isEnabled(.floatingNotes) {
+                    if back != nil && model.access.allows(.floatingNotes) {
                         SymbolButton(symbol: "pin", label: "Float notes", action: model.float)
                     }
                 }
@@ -59,7 +59,7 @@ struct NoteEditorView: View {
                 Text(model.saveStatus)
                     .appText(.caption)
                     .foregroundStyle(model.saveStatus == "Saved locally" ? AppColors.secondary : AppColors.error)
-                if model.features.isEnabled(.revisionHistoryUI) {
+                if model.access.allows(.revisionHistoryUI) {
                     Spacer(minLength: AppSpacing.xs)
                     Button("Revisions", action: model.toggleRevisions)
                         .buttonStyle(KaigiButtonStyle(.tertiary))
@@ -76,7 +76,7 @@ struct NoteEditorView: View {
                 .appText(.caption)
                 .buttonStyle(KaigiButtonStyle())
             }
-            if model.features.isEnabled(.revisionHistoryUI) && model.showingRevisions {
+            if model.access.allows(.revisionHistoryUI) && model.showingRevisions {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     if model.revisions.isEmpty {
                         Text("No revisions yet")
@@ -93,15 +93,21 @@ struct NoteEditorView: View {
                 .appText(.caption)
                 .buttonStyle(KaigiButtonStyle())
             }
+            if model.note.hasConfirmedContext {
+                NoteContextDisclosure(title: "Confirmed context", text: model.note.confirmedContext, contentID: "confirmed-note-context")
+            }
+            if model.hasPausedContextDraft {
+                NoteContextDisclosure(title: "Unconfirmed context draft", text: model.contextDraft, contentID: "unconfirmed-note-context")
+            }
             if model.hasAI {
                 HStack(spacing: AppSpacing.xs) {
-                    if model.features.isEnabled(.aiCleanUp) {
+                    if model.access.allows(.aiCleanUp) {
                         Button("Clean Up") {
                             model.refine(.cleanUp)
                         }
                         .help("Improve spelling and clarity in this note; review before applying")
                     }
-                    if model.features.isEnabled(.aiStructure) {
+                    if model.access.allows(.aiStructure) {
                         Button("Structure") {
                             model.refine(.structure)
                         }
@@ -159,5 +165,32 @@ struct NoteEditorView: View {
         .foregroundStyle(AppColors.primary)
         .onAppear { model.editorPresented(editorSession) }
         .onDisappear { model.editorDismissed(editorSession) }
+    }
+}
+
+private struct NoteContextDisclosure: View {
+    let title: String
+    let text: String
+    let contentID: String
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Button {
+                expanded.toggle()
+            } label: {
+                Label(title, systemImage: expanded ? "chevron.down" : "chevron.right")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(KaigiButtonStyle(.tertiary))
+            .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+            if expanded {
+                Text(text)
+                    .appText(.body)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier(contentID)
+            }
+        }
     }
 }

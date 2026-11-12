@@ -106,7 +106,7 @@ import Testing
                 let fixture = try TestComposition()
                 defer { fixture.clearPreferences() }
                 let visibility = CalendarVisibilityUseCase(preferences: fixture.preferences, coordinator: coordinator)
-                let model = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: fixture.actions, analytics: spy)
+                let model = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: fixture.actions, access: fixture.container.access, analytics: spy)
                 await model.connect(.system, fromOnboarding: fromOnboarding)
                 let expected: [AnalyticsEvent]
                 switch outcome {
@@ -215,7 +215,7 @@ import Testing
         defer { fixture.clearPreferences() }
         let spy = SpyAnalyticsTracker()
         let service = OutcomePreferences()
-        let model = SettingsViewModel(service: service, actions: fixture.actions, analytics: spy, onChanged: {})
+        let model = SettingsViewModel(service: service, actions: fixture.actions, access: fixture.container.access, analytics: spy, onChanged: {})
         model.presented(); model.presented(); model.refresh()
         await model.changeReminders(true); model.setLaunchAtLogin(true)
         #expect(spy.events == [.settingsOpened])

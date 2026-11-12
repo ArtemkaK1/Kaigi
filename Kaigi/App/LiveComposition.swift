@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 
 extension DependencyContainer {
-    static func makeLive(actions: any ApplicationActions, analytics: any AnalyticsTracking, isTesting: Bool = false, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
+    static func makeLive(actions: any ApplicationActions, access: FeatureAccess, analytics: any AnalyticsTracking, isTesting: Bool = false, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
         StartupTrace.mark("composition.begin")
         defer { StartupTrace.mark("composition.end") }
         #if DEBUG
@@ -50,7 +50,7 @@ extension DependencyContainer {
         }
         #endif
         StartupTrace.mark("notes.created")
-        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, features: .forLaunch(arguments: ProcessInfo.processInfo.arguments), analytics: analytics, closeOnboarding: closeOnboarding)
+        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, access: access, analytics: analytics, closeOnboarding: closeOnboarding)
     }
 }
 #if DEBUG

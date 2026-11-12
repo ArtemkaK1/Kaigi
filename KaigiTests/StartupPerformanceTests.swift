@@ -12,7 +12,7 @@ import Testing
         let provider = StartupCalendarProvider(holdPreparation: true)
         let coordinator = CalendarAccountCoordinator(providers: [provider])
         let visibility = CalendarVisibilityUseCase(preferences: preferences, coordinator: coordinator)
-        let useCase = AgendaUseCase(coordinator: coordinator, visibility: visibility, notes: fixture.container.noteUseCases, preferences: fixture.system, sample: true)
+        let useCase = AgendaUseCase(coordinator: coordinator, visibility: visibility, notes: fixture.container.noteUseCases, preferences: fixture.system, sample: true, access: fixture.container.access)
         let model = AgendaViewModel(useCase: useCase, selection: MeetingSelectionUseCase(store: fixture.store), join: ConferenceJoinUseCase(opener: fixture.actions), actions: fixture.actions, analytics: NoOpAnalyticsTracker(), detailFactory: { note, meeting in fixture.container.detail(note: note, meeting: meeting) })
         let load = Task { await model.load() }
         for _ in 0..<100 where provider.pending == nil { await Task.yield() }
@@ -40,7 +40,7 @@ import Testing
         let provider = StartupCalendarProvider(holdPreparation: false)
         let coordinator = CalendarAccountCoordinator(providers: [provider])
         let visibility = CalendarVisibilityUseCase(preferences: fixture.preferences, coordinator: coordinator)
-        let useCase = AgendaUseCase(coordinator: coordinator, visibility: visibility, notes: fixture.container.noteUseCases, preferences: fixture.system, sample: true)
+        let useCase = AgendaUseCase(coordinator: coordinator, visibility: visibility, notes: fixture.container.noteUseCases, preferences: fixture.system, sample: true, access: fixture.container.access)
         let result = try await useCase.load(day: Calendar.current.dateInterval(of: .day, for: .now)!)
         #expect(result.recovered.map(\.id) == [note.id])
         #expect(provider.eventQueries == 1)

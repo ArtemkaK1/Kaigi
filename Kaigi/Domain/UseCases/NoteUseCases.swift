@@ -2,6 +2,7 @@ import Foundation
 
 @MainActor struct NoteUseCases {
     let store: any NotesStore
+    let access: FeatureAccess
 
     func note(_ id: NoteID) throws -> NoteRecord {
         guard let note = try store.fetchNote(id: id) else { throw CalendarDomainError.missingNote }; return note
@@ -13,9 +14,9 @@ import Foundation
 
     func restore(_ revision: RevisionRecord) throws -> NoteRecord { try save(revision.noteID, text: revision.text, reason: "Restore revision") }
 
-    func document(_ id: NoteID, draft: String? = nil, includeContext: Bool = true) throws -> MarkdownDocument {
+    func document(_ id: NoteID, draft: String? = nil) throws -> MarkdownDocument {
         let note = try note(id)
-        let context = includeContext ? "\n\n## Confirmed context\n\n\(note.confirmedContext)\n" : "\n"
+        let context = note.hasConfirmedContext ? "\n\n## Confirmed context\n\n\(note.confirmedContext)\n" : "\n"
         return MarkdownDocument(text: "# \(note.title)\n\n\(note.start.formatted(date: .complete, time: .shortened))\n\n\(draft ?? note.text)\(context)", filename: "Kaigi-note.md")
     }
 
@@ -25,7 +26,7 @@ import Foundation
         let noteKeys = Set(notes.filter { !$0.text.isEmpty }.map(\.occurrenceKey))
         let contextKeys = Set(meetings.filter { meeting in
             guard meeting.recurring, let entry = series[meeting.seriesKey], entry.carryContext else { return false }
-            return notes.contains { $0.seriesID == entry.id && $0.start < meeting.start && !$0.confirmedContext.isEmpty }
+            return notes.contains { $0.seriesID == entry.id && $0.start < meeting.start && $0.hasConfirmedContext }
         }.map(\.occurrenceKey))
         return NoteBadges(notes: noteKeys, previousContext: contextKeys)
     }
@@ -36,8 +37,14 @@ import Foundation
         }
     }
 
-    func history(of note: NoteRecord) throws -> [NoteRecord] {
-        try store.fetchNotes().filter { $0.seriesID == note.seriesID && $0.id != note.id }.sorted { $0.start > $1.start }
+    func history(of note: NoteRecord, now: Date = .now) throws -> [NoteRecord] {
+        guard access.allows(.meetingHistory) else { return [] }
+        return try store.fetchNotes()
+            .filter {
+                $0.seriesID == note.seriesID && $0.occurrenceKey != note.occurrenceKey &&
+                    $0.start < note.start && $0.start <= now && $0.hasMeaningfulContent
+            }
+            .sorted { $0.start == $1.start ? $0.occurrenceKey < $1.occurrenceKey : $0.start > $1.start }
     }
 
     func flush() throws { try store.flush() }
@@ -47,20 +54,32 @@ import Foundation
 
     func select(_ event: CalendarEvent) throws -> NoteRecord { try store.openNote(for: event) }
 }
+enum MeetingContextError: LocalizedError {
+    case accessRequired
+
+    var errorDescription: String? { "Recurring context requires Kaigi Pro." }
+}
+
 @MainActor struct MeetingContextUseCase {
     let store: any NotesStore
+    let access: FeatureAccess
 
     func previous(for note: NoteRecord) throws -> [NoteRecord] {
-        try store.fetchNotes().filter { $0.seriesID == note.seriesID && $0.id != note.id && $0.start < note.start && !$0.confirmedContext.isEmpty }
+        guard access.allows(.recurringContext) else { return [] }
+        return try store.fetchNotes().filter { $0.seriesID == note.seriesID && $0.id != note.id && $0.start < note.start && $0.hasConfirmedContext }
     }
 
-    func confirm(_ id: NoteID, text: String) throws -> NoteRecord { try store.confirmContext(id: id, text: text) }
+    func confirm(_ id: NoteID, text: String) throws -> NoteRecord {
+        guard access.allows(.recurringContext) else { throw MeetingContextError.accessRequired }
+        return try store.confirmContext(id: id, text: text)
+    }
 
     func enabled(for note: NoteRecord) throws -> Bool { try store.fetchSeries().first { $0.id == note.seriesID }?.carryContext ?? false }
 
-    func enabled(for meeting: Meeting) throws -> Bool { try store.contextEnabled(for: meeting) }
-
-    func setEnabled(_ value: Bool, for meeting: Meeting) throws { try store.setContextEnabled(value, for: meeting) }
+    func setEnabled(_ value: Bool, for meeting: Meeting) throws {
+        guard access.allows(.recurringContext) else { throw MeetingContextError.accessRequired }
+        try store.setContextEnabled(value, for: meeting)
+    }
 }
 @MainActor struct ConferenceJoinUseCase {
     let opener: any LinkOpening
@@ -77,14 +96,14 @@ struct AgendaResult: Sendable { let meetings: [Meeting]; let recovered: [NoteRec
     let notes: NoteUseCases
     let preferences: any PreferencesService
     let sample: Bool
-    var features: FeatureToggles = .appStoreFree
+    let access: FeatureAccess
 
     func load(day: DateInterval) async throws -> AgendaResult {
         await coordinator.prepare()
         try Task.checkCancellation()
         visibility.initializeIfNeeded()
         let events = try await coordinator.events(in: day, visibleCalendarIDs: visibility.effectiveIDs)
-        if features.isEnabled(.meetingReminders) && preferences.remindersEnabled && !sample {
+        if access.allows(.meetingReminders) && preferences.remindersEnabled && !sample {
             let now = Date.now
             let upcoming = try await coordinator.events(in: DateInterval(start: now, duration: 7 * 86400), visibleCalendarIDs: visibility.effectiveIDs)
             guard !Task.isCancelled else { throw CancellationError() }

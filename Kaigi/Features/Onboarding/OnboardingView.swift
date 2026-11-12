@@ -38,7 +38,7 @@ struct OnboardingView: View {
                                 .foregroundStyle(AppColors.secondary)
                             Label("Open a meeting and write freely", systemImage: "square.and.pencil")
                                 .appText(.body)
-                            Label("Keep context across recurring meetings", systemImage: "text.bubble")
+                            Label("Revisit notes from previous meetings", systemImage: "calendar")
                                 .appText(.body)
                             Label("Keep your notes on this Mac", systemImage: "lock")
                                 .appText(.body)

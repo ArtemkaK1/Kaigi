@@ -5,7 +5,7 @@ struct MeetingContextView: View {
     @FocusState private var occurrencesFocused: Bool
     @Environment(\.controlActiveState) private var controlActiveState
     var body: some View {
-        if model.features.isEnabled(.meetingHistory) {
+        if model.access.allows(.meetingHistory) {
             HSplitView {
                 List(selection: Binding<NoteID?>(get: { model.selectedHistoryID ?? model.note.id }, set: model.selectHistory)) {
                     Section {
@@ -26,7 +26,7 @@ struct MeetingContextView: View {
                                 .foregroundStyle(AppColors.secondary)
                         }
                     } header: {
-                        Text("Earlier meetings")
+                        Text("Previous Notes")
                             .appText(.caption)
                     }
                 }
@@ -41,7 +41,7 @@ struct MeetingContextView: View {
             }
             .background(AppColors.background)
             .tint(AppColors.accent)
-        } else if model.features.isEnabled(.recurringContext) {
+        } else if model.access.allows(.recurringContext) {
             detailContent
                 .background(AppColors.background)
                 .tint(AppColors.accent)
@@ -85,7 +85,7 @@ struct MeetingContextView: View {
     private var currentMeeting: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             heading(model.note, category: model.isRecurring ? "Current meeting · Recurring series" : "Current meeting")
-            if model.features.isEnabled(.recurringContext) {
+            if model.access.allows(.recurringContext) {
                 if model.isRecurring {
                     Toggle("Use previous context", isOn: Binding(get: { model.carryEnabled }, set: model.setCarryEnabled))
                         .appText(.body)
@@ -153,7 +153,7 @@ struct MeetingContextView: View {
     private func earlierMeeting(_ record: NoteRecord) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             heading(record, category: "Earlier meeting")
-            if model.features.isEnabled(.floatingNotes) {
+            if model.access.allows(.floatingNotes) {
                 Button("Open note") { model.openHistory(record) }
                     .buttonStyle(KaigiButtonStyle())
                     .help("Open this occurrence in a floating note editor")
@@ -167,7 +167,7 @@ struct MeetingContextView: View {
                 .appText(.body)
                 .textSelection(.enabled)
                 .accessibilityIdentifier("history-note-content")
-            if model.features.isEnabled(.recurringContext) && !record.confirmedContext.isEmpty {
+            if record.hasConfirmedContext {
                 Divider()
                     .overlay(AppColors.border)
                 Text("Confirmed context")

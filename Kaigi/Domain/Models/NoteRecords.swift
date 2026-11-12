@@ -10,6 +10,9 @@ struct NoteRecord: Identifiable, Equatable, Sendable {
     let text: String
     let confirmedContext: String
     let updated: Date
+
+    var hasConfirmedContext: Bool { !confirmedContext.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var hasMeaningfulContent: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || hasConfirmedContext }
 }
 struct RevisionRecord: Identifiable, Sendable {
     let id: UUID

@@ -23,6 +23,20 @@ import Foundation
 
     func openCalendarSettings() throws { permissionSettings += 1 }
 }
+@MainActor final class TestEntitlementProvider: EntitlementProvider {
+    private let initial: EntitlementState
+    private var deliver: (@MainActor (EntitlementState) -> Void)?
+
+    init(_ initial: EntitlementState) { self.initial = initial }
+
+    func start(deliver: @escaping @MainActor (EntitlementState) -> Void) {
+        self.deliver = deliver
+        if initial != .loading { deliver(initial) }
+    }
+
+    func send(_ state: EntitlementState) { deliver?(state) }
+}
+
 @MainActor final class TestComposition {
     let suite: String
     let defaults: UserDefaults
@@ -32,15 +46,18 @@ import Foundation
     let system = PreviewPreferencesService()
     let actions = TestActions()
     let container: DependencyContainer
+    let entitlement: TestEntitlementProvider
 
-    init(calendars: Int = 1, meetings: Int = 3, firstRun: Bool = false, legacyIDs: [String]? = nil, store: NoteRepository? = nil, ai: (any AIRefinementService)? = nil, features: FeatureToggles = .appStoreFree, analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), provider: SampleCalendarGateway? = nil) throws {
+    init(calendars: Int = 1, meetings: Int = 3, firstRun: Bool = false, legacyIDs: [String]? = nil, store: NoteRepository? = nil, ai: (any AIRefinementService)? = nil, features: FeatureToggles = .released, entitlement: TestEntitlementProvider? = nil, analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), provider: SampleCalendarGateway? = nil) throws {
         suite = "kaigi.test.\(UUID().uuidString)"; defaults = UserDefaults(suiteName: suite)!
         if let legacyIDs { defaults.set(legacyIDs, forKey: "selectedCalendars") }
         preferences = AppPreferencesStore(defaults: defaults)
         self.provider = provider ?? SampleCalendarGateway(meetingCount: meetings, calendarCount: calendars)
         if firstRun { self.provider.access = .unknown }
         self.store = try store ?? NoteRepository(inMemory: true)
-        container = try DependencyContainer(providers: [self.provider], store: self.store, preferences: preferences, systemPreferences: system, ai: ai ?? UnavailableAIService(), opener: actions, permissionSettings: actions, actions: actions, sample: true, suppressOnboarding: !firstRun, features: features, analytics: analytics, closeOnboarding: {})
+        self.entitlement = entitlement ?? TestEntitlementProvider(.free)
+        let access = FeatureAccess(toggles: features, entitlement: EntitlementStore(provider: self.entitlement))
+        container = try DependencyContainer(providers: [self.provider], store: self.store, preferences: preferences, systemPreferences: system, ai: ai ?? UnavailableAIService(), opener: actions, permissionSettings: actions, actions: actions, sample: true, suppressOnboarding: !firstRun, access: access, analytics: analytics, closeOnboarding: {})
     }
 
     func clearPreferences() { defaults.removePersistentDomain(forName: suite) }

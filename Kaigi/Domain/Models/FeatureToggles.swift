@@ -1,4 +1,4 @@
-enum AppFeature: String, CaseIterable, Sendable {
+nonisolated enum AppFeature: String, CaseIterable, Sendable {
     case meetingHistory
     case recurringContext
     case aiCleanUp
@@ -11,16 +11,17 @@ enum AppFeature: String, CaseIterable, Sendable {
     case calendarManagement
 }
 
-/// Immutable availability only. No preferences, account state or network configuration.
-struct FeatureToggles: Sendable, Equatable {
+/// Immutable rollout configuration. Entitlement never changes this value.
+nonisolated struct FeatureToggles: Sendable, Equatable {
     private let enabled: Set<AppFeature>
 
     init(enabled: Set<AppFeature>) { self.enabled = enabled }
 
     func isEnabled(_ feature: AppFeature) -> Bool { enabled.contains(feature) }
 
-    static let appStoreFree = FeatureToggles(enabled: [
-        .calendarManagement, .meetingReminders, .markdownExport, .launchAtLogin
+    static let released = FeatureToggles(enabled: [
+        .calendarManagement, .meetingReminders, .markdownExport, .launchAtLogin, .revisionHistoryUI,
+        .meetingHistory, .recurringContext, .floatingNotes, .aiCleanUp, .aiStructure
     ])
     static let allEnabled = FeatureToggles(enabled: Set(AppFeature.allCases))
 }

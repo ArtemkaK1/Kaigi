@@ -42,7 +42,7 @@ import Testing
         #expect(marketing.map(\.links) == normal.map(\.links))
         #expect(marketing.allSatisfy { $0.calendarName == "Work" })
         await fixture.container.agenda.load()
-        #expect(fixture.container.features == .appStoreFree)
+        #expect(fixture.container.access.toggles == .released)
         #expect(fixture.container.agenda.meetings.count == 3)
         let meeting = try #require(fixture.container.agenda.meetings.first)
         fixture.container.agenda.select(meeting)

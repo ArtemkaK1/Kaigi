@@ -7,7 +7,7 @@ struct SettingsView: View {
             Text("Settings")
                 .appText(.section, weight: .semibold)
                 .accessibilityAddTraits(.isHeader)
-            if model.features.isEnabled(.calendarManagement) {
+            if model.access.allows(.calendarManagement) {
                 Button(action: model.showAccounts) {
                     HStack(spacing: AppSpacing.xs) {
                         Label("Accounts & Calendars", systemImage: "calendar");
@@ -17,7 +17,7 @@ struct SettingsView: View {
                 }
                 .buttonStyle(KaigiButtonStyle(.tertiary))
             }
-            if model.features.isEnabled(.calendarManagement) && (model.hasAI || model.features.isEnabled(.meetingReminders) || model.features.isEnabled(.launchAtLogin)) {
+            if model.access.allows(.calendarManagement) && (model.hasAI || model.access.allows(.meetingReminders) || model.access.allows(.launchAtLogin)) {
                 Divider()
                     .overlay(AppColors.border)
             }
@@ -26,12 +26,12 @@ struct SettingsView: View {
                     .appText(.body)
                     .tint(AppColors.accentFill)
             }
-            if model.features.isEnabled(.meetingReminders) {
+            if model.access.allows(.meetingReminders) {
                 Toggle("Remind me 5 minutes before meetings", isOn: Binding(get: { model.remindersEnabled }, set: model.setReminders))
                     .appText(.body)
                     .tint(AppColors.accentFill)
             }
-            if model.features.isEnabled(.launchAtLogin) {
+            if model.access.allows(.launchAtLogin) {
                 Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: model.setLaunchAtLogin))
                     .appText(.body)
                     .tint(AppColors.accentFill)

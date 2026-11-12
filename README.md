@@ -2,7 +2,7 @@
 
 **Your meetings. Your notes. All connected.**
 
-Kaigi (会議, “meeting”) is a native macOS menu bar app for meetings and private occurrence notes. The initial free configuration includes local SwiftData storage, autosave, calendar management, reminders, Markdown export and launch at login.
+Kaigi (会議, “meeting”) is a native macOS menu bar app for meetings and private occurrence notes. The initial free configuration includes local SwiftData storage, autosave, calendar management, reminders, Markdown export, revision history and restoration, and launch at login.
 
 ## Build and run
 
@@ -25,19 +25,19 @@ git diff --check
 
 The Swift module remains `Meetrail` to preserve SwiftData model identity; tests use `@testable import Meetrail`.
 
-For a private preview, run a Debug build with `--sample --show-agenda`. This uses synthetic calendars and in-memory notes without requesting calendar access, and defaults to the free configuration. Explicitly add `--all-features` to test retained advanced features; this override is accepted only in Debug with `--sample` and is never persisted. Release ignores these overrides. Add `--context-history` for synthetic earlier occurrences, `--mock-ai` for deterministic AI, `--onboarding` to preview setup, `--large-text` to check accessibility text sizing, or `-NSAppearance Aqua` / `-NSAppearance DarkAqua` to check appearance. UI tests require an interactive macOS session and local UI Automation authorization; live calendar integration tests require the synthetic fixtures described by `Tools/run-calendar-qa.sh` and cleanup afterward.
+For a private preview, run a Debug build with `--sample --show-agenda`. This uses synthetic calendars and in-memory notes without requesting calendar access, and defaults to the free configuration. Add `--simulate-entitlement` to start in Loading and switch between Loading, Free, and Pro from the status item’s right-click menu. Add `--all-features` to start directly in Pro with the QA rollout. Both overrides require a synthetic Debug session and are excluded from the marketing profile. Release always resolves Free. Add `--context-history` for synthetic earlier occurrences, `--mock-ai` for deterministic AI, `--onboarding` to preview setup, `--large-text` to check accessibility text sizing, or `-NSAppearance Aqua` / `-NSAppearance DarkAqua` to check appearance. UI tests require an interactive macOS session and local UI Automation authorization; live calendar integration tests require the synthetic fixtures described by `Tools/run-calendar-qa.sh` and cleanup afterward.
 
 ## Use and capabilities
 
 - A compact, single-day agenda with separate notes and Join actions, labeled conference links, and keyboard navigation. Right-click the menu bar symbol for Settings and Quit Kaigi.
-- Occurrence notes with local autosave and Markdown export. Notes from missing calendar events remain recoverable on their original agenda day.
+- Occurrence notes with local autosave, revision history and restoration, and Markdown export. Notes from missing calendar events remain recoverable on their original agenda day. Saved confirmed context is readable and included in exports.
 - Optional local reminders that omit private meeting titles and notes, plus launch at login.
 
 Only Apple / System Calendars connects today. Google, Microsoft, and CalDAV accounts already synchronized through macOS are available through EventKit. Calendar access is requested only after an explicit Connect action, and production adapters are read-only. Direct provider connections are labeled Coming Soon; external AI services are not implemented.
 
 Calendar and notification consent, launch-at-login approval, model readiness, and conference links depend on macOS and external services. Synthetic previews do not validate those services.
 
-Meeting history, recurring context, AI Clean Up/Structure, revision restoration UI and floating editors are disabled in the initial free configuration. Their source implementations and existing stored context/revisions remain intact. Internal revision creation continues for durability and recovery. See the complete [feature matrix and developer guide](Docs/FeatureToggles.md). This configuration has not been submitted to App Review; runtime toggles alone do not establish compliance with Apple's dormant-functionality rules.
+Kaigi Pro groups meeting-scoped history, recurring context workflows, floating editors, AI Clean Up, and AI Structure. Normal launches use Free until the verified entitlement provider is integrated. P1 has not been submitted to App Review. See the [feature matrix and developer guide](Docs/FeatureToggles.md).
 
 ## Data and compatibility
 
@@ -49,9 +49,17 @@ Existing Meetrail data is not migrated or removed automatically. Read [the data 
 
 Views → ViewModels → Domain use cases/services → repository/provider protocols → Data/Infrastructure adapters. App composition constructs concrete dependencies and coordinates windows. ViewModels use Foundation/Observation with `@MainActor @Observable`; SwiftData, EventKit, and Foundation Models stay in Data. Infrastructure owns OS export, browser, notification, permission-settings, and login-item adapters. Shared DesignSystem components render values and forward actions.
 
-The composition root injects one immutable, typed `FeatureToggles` value into ViewModels, application actions and window coordination. Views render their ViewModel's availability. Firebase Analytics and Crashlytics are the third-party product integrations. Feature availability has no mutable flag service, remote settings, payment state or persisted toggle values.
+App composition injects one shared `FeatureAccess` policy. It combines immutable rollout configuration with the observable entitlement store. Views render the ViewModel’s access, and use cases and window routes check access during execution. Firebase Analytics and Crashlytics remain the third-party product integrations.
 
 Calendar providers register through `CalendarAccountCoordinator`. Future provider identities are namespaced by provider, account, and calendar. The [design system](Docs/Brand/DesignSystem.md) documents adaptive purple/neutral colors, native typography, spacing, and controls. Every SwiftUI View modifier starts on its own line.
+
+## P1 feature-access validation — 12 November 2026
+
+Signed Debug and universal Release builds passed on macOS 26.6.2 with Xcode 27. The selected run passed 80 unit tests and 12 focused UI tests. The UI tests exercised Free revision restoration in both appearances, read-only saved context through day navigation, and entitlement changes while floating notes and History & Context were open. The unit suite covered revocation during AI generation, a floating draft with a failed save, and a synthetic on-disk store reopened after entitlement changes.
+
+The Release probe resolved Free with synthetic arguments and environment variables, and the Release executable contained no simulation markers. Architecture, Swift spacing, signatures, transfer tests, and Crashlytics bundle checks passed. The Analytics bundle check used the DER entitlement output because the legacy XML command could not read that Release signature. The Swift macro probe and signed builds required a shell with access to the compiler plug-in and the existing signing identity.
+
+The live EventKit fixture test was excluded. UI tests used synthetic sessions. macOS 15, manual VoiceOver, live system permission flows, and the owner’s production store were outside this validation.
 
 ## Feature-toggle validation — 3 November 2026
 
@@ -87,7 +95,7 @@ open -n /tmp/kaigi-bulk-derived/Build/Products/Debug/Kaigi.app --args \
 
 Use `DarkAqua` for Dark Mode. Omitting `--test-session` creates a fresh random isolated session automatically; reusing an explicit identifier preserves that session's selection preferences. Notes remain in memory. No calendar permission is requested and no production store or EventKit calendars are written.
 
-`--marketing-fixtures` is accepted only with `--sample` in Debug. It provides fictitious system-calendar groupings: **Work Account** (Work, Team Meetings, Project Reviews), **Personal Account** (Personal, Family, Birthdays), and **Subscribed Calendars** (Holidays, Travel). All eight calendars have distinct deterministic provider colors. Existing meeting occurrence IDs and conference links are retained, with the existing `sample` calendar presented as Work. The profile never implies direct third-party account integration, persists no fixture names or profile flag, and always uses `.appStoreFree`, even when combined with `--all-features`.
+`--marketing-fixtures` is accepted only with `--sample` in Debug. It provides fictitious system-calendar groupings: **Work Account** (Work, Team Meetings, Project Reviews), **Personal Account** (Personal, Family, Birthdays), and **Subscribed Calendars** (Holidays, Travel). All eight calendars have distinct deterministic provider colors. Existing meeting occurrence IDs and conference links are retained, with the existing `sample` calendar presented as Work. The profile never implies direct third-party account integration, persists no fixture names or profile flag, and always resolves Free, including with `--all-features` or `--simulate-entitlement`.
 
 Normal `--sample` names and IDs are unchanged. If `--fifty-calendars` is also specified, the existing 50-calendar scale fixture takes precedence. Release compiles out the marketing factory and launch handling; marketing arguments cannot select synthetic providers in Release. Synthetic UI captures are validation screenshots only; no App Store artwork or website assets are generated by this workflow.
 

@@ -29,7 +29,7 @@ struct ProviderCardState: Identifiable {
     var connectionSummary: String { kind == .system ? "Connected through macOS" : "Connected" }
 }
 @MainActor @Observable final class CalendarAccountsViewModel {
-    let features: FeatureToggles
+    let access: FeatureAccess
     private let analytics: any AnalyticsTracking
     private var presentedPage: CalendarAccountsPage?
     private var hasSearched = false
@@ -42,7 +42,7 @@ struct ProviderCardState: Identifiable {
     var search = "" {
         didSet {
             if search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { hasSearched = false }
-            else if !hasSearched && features.isEnabled(.calendarManagement) { hasSearched = true; analytics.track(.calendarsSearchUsed) }
+            else if !hasSearched && access.allows(.calendarManagement) { hasSearched = true; analytics.track(.calendarsSearchUsed) }
         }
     }
     private var expanded: Set<AccountID> = []
@@ -52,8 +52,8 @@ struct ProviderCardState: Identifiable {
     private(set) var connecting = false
     private(set) var error: String?
 
-    init(coordinator: CalendarAccountCoordinator, visibility: CalendarVisibilityUseCase, permissionSettings: any PermissionSettingsOpening, features: FeatureToggles = .appStoreFree, analytics: any AnalyticsTracking) {
-        self.features = features
+    init(coordinator: CalendarAccountCoordinator, visibility: CalendarVisibilityUseCase, permissionSettings: any PermissionSettingsOpening, access: FeatureAccess, analytics: any AnalyticsTracking) {
+        self.access = access
         self.analytics = analytics
         self.coordinator = coordinator; self.visibility = visibility; self.permissionSettings = permissionSettings
         coordinator.observe { [weak self] in self?.refresh() }; refresh()
@@ -72,7 +72,7 @@ struct ProviderCardState: Identifiable {
     var hasConnectedProvider: Bool { coordinator.connectionState == .connected }
 
     func pagePresented() {
-        guard features.isEnabled(.calendarManagement), presentedPage != page else { return }
+        guard access.allows(.calendarManagement), presentedPage != page else { return }
         presentedPage = page
         hasSearched = false
         analytics.track(page == .connections ? .accountsOpened : .calendarsOpened)
@@ -99,7 +99,7 @@ struct ProviderCardState: Identifiable {
     }
 
     func requestConnection(_ kind: CalendarProviderKind, fromOnboarding: Bool = false) {
-        guard features.isEnabled(.calendarManagement) else { return }
+        guard access.allows(.calendarManagement) else { return }
         if kind == .system && coordinator.state(for: kind) == .permissionDenied {
             do { try permissionSettings.openCalendarSettings() } catch { self.error = error.localizedDescription }; return
         }
@@ -113,7 +113,7 @@ struct ProviderCardState: Identifiable {
     }
 
     func connect(_ kind: CalendarProviderKind, fromOnboarding: Bool = false) async {
-        guard features.isEnabled(.calendarManagement), !connecting, coordinator.state(for: kind) != .comingSoon else { return }
+        guard access.allows(.calendarManagement), !connecting, coordinator.state(for: kind) != .comingSoon else { return }
         analytics.track(fromOnboarding ? .onboardingConnectTapped : .accountsConnectTapped)
         connecting = true; error = nil; defer { connecting = false; refresh() }
         do {
@@ -129,14 +129,14 @@ struct ProviderCardState: Identifiable {
     func toggleGroup(_ id: AccountID) { if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) } }
 
     func setCalendar(_ id: CalendarID, visible: Bool) {
-        guard features.isEnabled(.calendarManagement) else { return }
+        guard access.allows(.calendarManagement) else { return }
         let changed = selectedIDs.contains(id) != visible
         visibility.set([id], visible: visible); refresh()
         if changed { analytics.track(.calendarsVisibilityChanged(visible)) }
     }
 
     func selectGroup(_ id: AccountID, visible: Bool) {
-        guard features.isEnabled(.calendarManagement) else { return }
+        guard access.allows(.calendarManagement) else { return }
         // Group actions include the entire account, not merely the currently searched rows.
         let ids = Set(catalog.calendars.filter { $0.accountID == id }.map(\.id))
         let changed = visible ? !ids.isSubset(of: selectedIDs) : !ids.isDisjoint(with: selectedIDs)

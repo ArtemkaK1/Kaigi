@@ -28,6 +28,6 @@ import Testing
         for flag in ["--sample", "--marketing-fixtures", "--all-features", "--test-session"] {
             #expect(!AnalyticsLaunchPolicy.usesLiveAnalytics(arguments: [flag], isTesting: false))
         }
-        #expect(FeatureToggles.forLaunch(arguments: []) == .appStoreFree)
+        #expect(FeatureToggles.forLaunch(arguments: []) == .released)
     }
 }

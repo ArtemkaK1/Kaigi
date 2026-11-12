@@ -7,21 +7,28 @@ import SwiftUI
     override var canBecomeMain: Bool { true }
 
     override func cancelOperation(_ sender: Any?) { orderOut(nil) }
+
+    func setFloating(_ enabled: Bool) {
+        if enabled { styleMask.insert(.utilityWindow) } else { styleMask.remove(.utilityWindow) }
+        isFloatingPanel = enabled
+        level = enabled ? .floating : .normal
+        hidesOnDeactivate = false
+    }
 }
 @MainActor final class AppRouter: ApplicationActions {
     weak var windows: AppWindowCoordinator?
     private let exporter: MarkdownExporter
-    private let features: FeatureToggles
+    private let access: FeatureAccess
 
-    init(exporter: MarkdownExporter, features: FeatureToggles) { self.exporter = exporter; self.features = features }
+    init(exporter: MarkdownExporter, access: FeatureAccess) { self.exporter = exporter; self.access = access }
 
-    func showAccounts() { guard features.isEnabled(.calendarManagement) else { return }; windows?.showAccounts() }
+    func showAccounts() { guard access.allows(.calendarManagement) else { return }; windows?.showAccounts() }
 
-    func showFloatingNote(_ id: NoteID) { guard features.isEnabled(.floatingNotes) else { return }; windows?.showFloatingNote(id) }
+    func showFloatingNote(_ id: NoteID) { guard access.allows(.floatingNotes) else { return }; windows?.showFloatingNote(id) }
 
-    func showMeetingContext(_ id: NoteID) { guard features.isEnabled(.meetingHistory) || features.isEnabled(.recurringContext) else { return }; windows?.showMeetingContext(id) }
+    func showMeetingContext(_ id: NoteID) { guard access.allowsMeetingContextWindow else { return }; windows?.showMeetingContext(id) }
 
-    @discardableResult func export(_ document: MarkdownDocument) async throws -> ExportOutcome { guard features.isEnabled(.markdownExport) else { return .cancelled }; return try await exporter.export(document) }
+    @discardableResult func export(_ document: MarkdownDocument) async throws -> ExportOutcome { guard access.allows(.markdownExport) else { return .cancelled }; return try await exporter.export(document) }
 
     func dismissOnboarding() { windows?.closeOnboarding() }
 }
@@ -31,6 +38,9 @@ import SwiftUI
     private var router: AppRouter?
     private var startupFailure: Error?
     private var firebaseAnalytics: FirebaseAnalyticsAdapter?
+    #if DEBUG
+    private var entitlementSimulator: SimulatedEntitlementProvider?
+    #endif
 
     override init() {
         super.init()
@@ -38,7 +48,16 @@ import SwiftUI
         // Settings scene content is constructed before didFinishLaunching. Resolve
         // its injected ViewModel first, without creating windows or requesting access.
         do {
-            let router = AppRouter(exporter: MarkdownExporter(), features: .forLaunch(arguments: ProcessInfo.processInfo.arguments)); self.router = router
+            let arguments = ProcessInfo.processInfo.arguments
+            let provider = EntitlementLaunchPolicy.makeProvider(arguments: arguments)
+            let access = FeatureAccess(toggles: .forLaunch(arguments: arguments), entitlement: EntitlementStore(provider: provider))
+            #if DEBUG
+            if arguments.contains("--simulate-entitlement") {
+                entitlementSimulator = provider as? SimulatedEntitlementProvider
+            }
+            #endif
+            let router = AppRouter(exporter: MarkdownExporter(), access: access)
+            self.router = router
             let environment = ProcessInfo.processInfo.environment
             let isTesting = environment["XCTestConfigurationFilePath"] != nil || environment["XCTestBundlePath"] != nil || NSClassFromString("XCTestCase") != nil
             let analytics: any AnalyticsTracking
@@ -49,7 +68,7 @@ import SwiftUI
             } else {
                 analytics = NoOpAnalyticsTracker()
             }
-            container = try DependencyContainer.makeLive(actions: router, analytics: analytics, isTesting: isTesting, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
+            container = try DependencyContainer.makeLive(actions: router, access: access, analytics: analytics, isTesting: isTesting, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
         } catch { startupFailure = error }
         StartupTrace.mark("delegate.end")
     }
@@ -78,6 +97,9 @@ import SwiftUI
             alert.runModal(); NSApp.terminate(nil); return
         }
         let windows = AppWindowCoordinator(container: container); self.windows = windows; router.windows = windows
+        #if DEBUG
+        windows.entitlementSimulator = entitlementSimulator
+        #endif
         windows.start()
     }
 
@@ -86,6 +108,14 @@ import SwiftUI
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if container?.hasUnconfirmedContextDrafts == true {
+            let alert = NSAlert()
+            alert.messageText = "You have unconfirmed context drafts"
+            alert.informativeText = "Keep Kaigi open to copy your drafts or return to them later in this session."
+            alert.addButton(withTitle: "Keep Kaigi Open")
+            alert.addButton(withTitle: "Quit and Discard Context Drafts")
+            guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
+        }
         do { try container?.flushDrafts(); return .terminateNow }
         catch {
             let alert = NSAlert(); alert.messageText = "Your notes could not be saved"
@@ -105,8 +135,15 @@ import SwiftUI
     private var floatingPanels: [NoteID: AgendaPanel] = [:]
     private var contextWindows: [NoteID: NSWindow] = [:]
     private var notificationTokens: [NSObjectProtocol] = []
+    #if DEBUG
+    var entitlementSimulator: SimulatedEntitlementProvider?
+    #endif
 
-    init(container: DependencyContainer) { self.container = container }
+    init(container: DependencyContainer) {
+        self.container = container
+        super.init()
+        container.access.observeChanges { [weak self] in self?.updateWindowAccess() }
+    }
 
     func start() {
         StartupTrace.mark("status.begin")
@@ -166,10 +203,27 @@ import SwiftUI
             let menu = NSMenu()
             let settings = menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ","); settings.target = self
             menu.addItem(.separator())
+            #if DEBUG
+            if entitlementSimulator != nil {
+                for (title, state) in [("Simulate Loading", EntitlementState.loading), ("Simulate Free", .free), ("Simulate Pro", .pro)] {
+                    let item = menu.addItem(withTitle: title, action: #selector(simulateEntitlement(_:)), keyEquivalent: "")
+                    item.target = self
+                    item.representedObject = state
+                }
+                menu.addItem(.separator())
+            }
+            #endif
             let quit = menu.addItem(withTitle: "Quit Kaigi", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); quit.target = NSApp
             NSMenu.popUpContextMenu(menu, with: event, for: button)
         } else if agendaPopover.isShown { closeAgenda() } else { showAgenda() }
     }
+
+    #if DEBUG
+    @objc private func simulateEntitlement(_ sender: NSMenuItem) {
+        guard let state = sender.representedObject as? EntitlementState else { return }
+        entitlementSimulator?.simulate(state)
+    }
+    #endif
 
     @objc private func showSettings() {
         closeAgenda(); NSApp.activate(ignoringOtherApps: true)
@@ -213,7 +267,7 @@ import SwiftUI
     }
 
     func showAccounts() {
-        guard container.features.isEnabled(.calendarManagement) else { return }
+        guard container.access.allows(.calendarManagement) else { return }
         closeAgenda(); container.accounts.refresh()
         if accountsWindow == nil {
             accountsWindow = makeWindow(title: "Accounts & Calendars", root: CalendarAccountsView(model: container.accounts))
@@ -262,7 +316,7 @@ import SwiftUI
     }
 
     func showMeetingContext(_ id: NoteID) {
-        guard container.features.isEnabled(.meetingHistory) || container.features.isEnabled(.recurringContext) else { return }
+        guard container.access.allowsMeetingContextWindow else { return }
         do {
             let detail = try container.detail(id: id)
             detail.reloadContext()
@@ -280,12 +334,18 @@ import SwiftUI
     }
 
     func showFloatingNote(_ id: NoteID) {
-        guard container.features.isEnabled(.floatingNotes) else { return }
+        guard container.access.allows(.floatingNotes) else { return }
         do {
-            if let panel = floatingPanels[id] { NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil); return }
+            if let panel = floatingPanels[id] {
+                panel.setFloating(true)
+                NSApp.activate(ignoringOtherApps: true)
+                panel.makeKeyAndOrderFront(nil)
+                return
+            }
             let detail = try container.detail(id: id)
             let panel = AgendaPanel(contentRect: NSRect(x: 160, y: 180, width: AppLayout.notesWidth, height: AppLayout.detailHeight), styleMask: [.titled, .closable, .resizable, .utilityWindow], backing: .buffered, defer: false)
-            panel.title = "Kaigi — \(detail.note.title)"; panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
+            panel.title = "Kaigi — \(detail.note.title)"
+            panel.setFloating(true)
             panel.isReleasedWhenClosed = false; panel.minSize = NSSize(width: 320, height: 400); panel.delegate = self
             let host = NSHostingController(
                 rootView: ScrollView {
@@ -295,6 +355,16 @@ import SwiftUI
             ); host.sizingOptions = []
             panel.contentViewController = host; floatingPanels[id] = panel; NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil)
         } catch { let alert = NSAlert(); alert.messageText = error.localizedDescription; alert.runModal() }
+    }
+
+    private func updateWindowAccess() {
+        if !container.access.allows(.floatingNotes) {
+            // Keep the existing editor and any draft that failed to save.
+            for panel in floatingPanels.values where panel.isFloatingPanel { panel.setFloating(false) }
+        }
+        if !container.access.allowsMeetingContextWindow {
+            for window in Array(contextWindows.values) { window.close() }
+        }
     }
 
     func windowWillClose(_ notification: Notification) {

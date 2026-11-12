@@ -35,7 +35,7 @@ import AppKit
             app.buttons["Open notes for Product conversation"].click()
             let editor = app.textViews["Meeting notes"]
             XCTAssertTrue(editor.waitForExistence(timeout: 3))
-            for label in ["Clean Up", "Structure", "Revisions", "History & Context", "Float notes", "Apply"] {
+            for label in ["Clean Up", "Structure", "History & Context", "Float notes", "Apply"] {
                 XCTAssertFalse(app.buttons[label].exists, label)
             }
             XCTAssertFalse(app.staticTexts["On-device AI unavailable"].exists)
@@ -44,9 +44,17 @@ import AppKit
             XCTAssertTrue(app.buttons["Join Google Meet"].exists)
             editor.click(); editor.typeText("Synthetic free note")
             XCTAssertTrue(app.staticTexts["Saved locally"].exists)
+            XCTAssertTrue(app.buttons["Revisions"].exists)
+            app.buttons["Revisions"].click()
+            let restore = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Restore ")).firstMatch
+            XCTAssertTrue(restore.waitForExistence(timeout: 3))
+            restore.click()
+            XCTAssertEqual(editor.value as? String ?? "", "")
+            editor.click(); editor.typeText("Synthetic free note")
             let panel = app.popovers["Kaigi agenda"]
             XCTAssertLessThan(panel.frame.height, 400)
-            XCTAssertLessThan(panel.frame.maxY - app.staticTexts["Saved locally"].frame.maxY, 40, "No empty advanced-controls region")
+            let footerBottom = max(app.staticTexts["Saved locally"].frame.maxY, app.buttons["Revisions"].frame.maxY)
+            XCTAssertLessThan(panel.frame.maxY - footerBottom, 40, "No empty advanced-controls region")
             capture(panel, "FeatureToggles free editor \(appearance)")
             app.typeKey("[", modifierFlags: .command)
             app.buttons["Open notes for Product conversation"].click()
@@ -59,6 +67,25 @@ import AppKit
             capture(app.windows.firstMatch, "FeatureToggles free settings \(appearance)")
             app.terminate()
         }
+    }
+
+    func testFreeReadsConfirmedContextThroughDayNavigation() throws {
+        let app = launch(["--context-history"])
+        defer { app.terminate() }
+        app.buttons["Previous day"].click()
+        let savedMeeting = app.buttons.matching(NSPredicate(
+            format: "label == %@ AND value CONTAINS %@", "Open notes for Weekly planning", "has notes"
+        )).firstMatch
+        XCTAssertTrue(savedMeeting.waitForExistence(timeout: 5))
+        savedMeeting.click()
+        let context = app.buttons["Confirmed context"]
+        XCTAssertTrue(context.waitForExistence(timeout: 3))
+        context.click()
+        let confirmed = app.staticTexts["confirmed-note-context"]
+        XCTAssertTrue(confirmed.waitForExistence(timeout: 3))
+        XCTAssertTrue((confirmed.value as? String ?? confirmed.label).contains("Review the draft at the next meeting."))
+        XCTAssertFalse(app.buttons["History & Context"].exists)
+        XCTAssertFalse(app.buttons["Confirm context"].exists)
     }
 
     func testMarkdownExportCancellationPreservesSyntheticDraft() throws {
@@ -90,6 +117,55 @@ import AppKit
         }
         capture(app.popovers["Kaigi agenda"], "FeatureToggles all-enabled editor")
         app.terminate()
+    }
+
+    func testEntitlementTransitionsUpdateOpenEditorsAndHistory() throws {
+        let app = launch(["--simulate-entitlement", "--context-history", "--mock-ai"])
+        defer { app.terminate() }
+        let status = app.statusItems.firstMatch
+        let weekly = app.buttons["Open notes for Weekly planning"]
+        XCTAssertTrue(weekly.waitForExistence(timeout: 5))
+        XCTAssertFalse((weekly.value as? String ?? "").contains("previous confirmed context"))
+
+        func simulate(_ state: String) {
+            status.rightClick()
+            let option = status.menuItems["Simulate \(state)"]
+            XCTAssertTrue(option.waitForExistence(timeout: 3))
+            option.click()
+        }
+
+        simulate("Free")
+        status.click()
+        XCTAssertTrue(weekly.waitForExistence(timeout: 3))
+        XCTAssertFalse((weekly.value as? String ?? "").contains("previous confirmed context"))
+        simulate("Pro")
+        status.click()
+        XCTAssertTrue(weekly.waitForExistence(timeout: 3))
+        XCTAssertTrue((weekly.value as? String ?? "").contains("previous confirmed context"))
+        weekly.click()
+        let editor = app.popovers["Kaigi agenda"].textViews["Meeting notes"]
+        editor.click(); editor.typeText("Draft across entitlement changes")
+        app.buttons["Float notes"].click()
+        let floating = app.windows["Kaigi — Weekly planning"]
+        XCTAssertTrue(floating.waitForExistence(timeout: 3))
+        floating.buttons["History & Context"].click()
+        let history = app.windows["History & Context — Weekly planning"]
+        XCTAssertTrue(history.waitForExistence(timeout: 3))
+        XCTAssertTrue(history.staticTexts["Previous Notes"].exists)
+
+        simulate("Free")
+        XCTAssertTrue(history.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(floating.exists)
+        XCTAssertFalse(floating.buttons["History & Context"].exists)
+        XCTAssertFalse(floating.buttons["Clean Up"].exists)
+        XCTAssertTrue(floating.buttons["Revisions"].exists)
+        XCTAssertEqual(floating.textViews["Meeting notes"].value as? String, "Draft across entitlement changes")
+
+        simulate("Loading")
+        XCTAssertFalse(floating.buttons["Clean Up"].exists)
+        simulate("Pro")
+        XCTAssertTrue(floating.buttons["Clean Up"].waitForExistence(timeout: 3))
+        XCTAssertEqual(floating.textViews["Meeting notes"].value as? String, "Draft across entitlement changes")
     }
 
     func testDayNavigationSelectionAndFloatingEditor() throws {
@@ -267,6 +343,8 @@ import AppKit
         let window = app.windows["Welcome to Kaigi"]
         XCTAssertTrue(window.waitForExistence(timeout: 8))
         XCTAssertFalse(app.buttons["Next day"].exists)
+        XCTAssertTrue(window.staticTexts["Revisit notes from previous meetings"].exists)
+        XCTAssertFalse(window.staticTexts["Keep context across recurring meetings"].exists)
         capture(window, "Kaigi onboarding welcome")
         XCTAssertLessThan(window.frame.height, 400, "Welcome fits its content")
         window.buttons["Continue"].click()

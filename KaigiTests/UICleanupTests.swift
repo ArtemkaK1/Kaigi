@@ -5,7 +5,7 @@ import UserNotifications
 
 @MainActor struct UICleanupTests {
     @Test func contextWindowSharesDraftAndSynchronizesEarlierNoteEdits() throws {
-        let fixture = try TestComposition(features: .allEnabled); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(features: .allEnabled, entitlement: .init(.pro)); defer { fixture.clearPreferences() }
         let first = KaigiTests().meeting()
         let older = try fixture.store.openNote(for: first)
         _ = try fixture.store.saveDraft(id: older.id, text: "Earlier notes", reason: "Edit")
@@ -67,7 +67,7 @@ import UserNotifications
     }
 
     @Test func historyAndContextRemainAssociatedAfterCalendarRemoval() throws {
-        let fixture = try TestComposition(features: .allEnabled); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(features: .allEnabled, entitlement: .init(.pro)); defer { fixture.clearPreferences() }
         let first = KaigiTests().meeting()
         let older = try fixture.store.openNote(for: first)
         _ = try fixture.store.confirmContext(id: older.id, text: "Review scope")
@@ -83,7 +83,7 @@ import UserNotifications
     }
 
     @Test func aiSettingPersistsAndDisablingDiscardsOnlyTheSuggestion() async throws {
-        let fixture = try TestComposition(ai: MockAIRefinementService(result: "Suggestion"), features: .allEnabled); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(ai: MockAIRefinementService(result: "Suggestion"), features: .allEnabled, entitlement: .init(.pro)); defer { fixture.clearPreferences() }
         let record = try fixture.store.openNote(for: KaigiTests().meeting())
         let model = fixture.container.detail(note: record, meeting: nil)
         model.updateText("Original note"); model.refine(.cleanUp); await model.waitForRefinement()

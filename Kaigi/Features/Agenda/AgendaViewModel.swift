@@ -5,7 +5,7 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
 
 @MainActor @Observable final class AgendaViewModel {
     private let analytics: any AnalyticsTracking
-    let features: FeatureToggles
+    var access: FeatureAccess { useCase.access }
     private let useCase: AgendaUseCase
     private let selection: MeetingSelectionUseCase
     private let joinUseCase: ConferenceJoinUseCase
@@ -21,7 +21,8 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
     private(set) var loading = false
     private(set) var recovered: [NoteRecord] = []
     private(set) var noteKeys: Set<String> = []
-    private(set) var contextKeys: Set<String> = []
+    private var savedContextKeys: Set<String> = []
+    var contextKeys: Set<String> { access.allows(.recurringContext) ? savedContextKeys : [] }
     private var loadTask: Task<Void, Never>?
     private var loadGeneration = 0
     var entries: [AgendaEntry] {
@@ -30,16 +31,15 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
     var weekday: String { day.date.formatted(.dateTime.weekday(.wide)) }
     var fullDate: String { day.date.formatted(.dateTime.day().month(.wide).year()) }
 
-    init(useCase: AgendaUseCase, selection: MeetingSelectionUseCase, join: ConferenceJoinUseCase, actions: any ApplicationActions, features: FeatureToggles = .appStoreFree, analytics: any AnalyticsTracking, detailFactory: @escaping (NoteRecord, Meeting?) -> MeetingDetailViewModel) {
+    init(useCase: AgendaUseCase, selection: MeetingSelectionUseCase, join: ConferenceJoinUseCase, actions: any ApplicationActions, analytics: any AnalyticsTracking, detailFactory: @escaping (NoteRecord, Meeting?) -> MeetingDetailViewModel) {
         self.analytics = analytics
-        self.features = features
         self.useCase = useCase; self.selection = selection; joinUseCase = join; self.actions = actions
         self.detailFactory = detailFactory
         useCase.coordinator.observe { [weak self] in self?.refresh() }
     }
 
     func notesChanged() {
-        do { let badges = try useCase.notes.badges(for: meetings); noteKeys = badges.notes; contextKeys = features.isEnabled(.recurringContext) ? badges.previousContext : [] }
+        do { let badges = try useCase.notes.badges(for: meetings); noteKeys = badges.notes; savedContextKeys = badges.previousContext }
         catch { self.error = error.localizedDescription }
     }
 
@@ -73,7 +73,7 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
         do {
             let value = try await useCase.load(day: day.interval)
             guard !Task.isCancelled, generation == loadGeneration else { return }
-            meetings = value.meetings; recovered = value.recovered; noteKeys = value.badges.notes; contextKeys = features.isEnabled(.recurringContext) ? value.badges.previousContext : []
+            meetings = value.meetings; recovered = value.recovered; noteKeys = value.badges.notes; savedContextKeys = value.badges.previousContext
             connection = value.connection; error = nil
         } catch is CancellationError { return }
         catch { guard generation == loadGeneration else { return }; self.error = error.localizedDescription }
@@ -98,7 +98,7 @@ struct AgendaEntry { let key: String; let start: Date; let meeting: Meeting?; le
 
     func join(_ link: MeetingLink) { analytics.track(.agendaJoinTapped); do { try joinUseCase.join(link) } catch { self.error = error.localizedDescription } }
 
-    func connect() { guard features.isEnabled(.calendarManagement) else { return }; actions.showAccounts() }
+    func connect() { guard access.allows(.calendarManagement) else { return }; actions.showAccounts() }
 
     func dismissError() { error = nil }
 }

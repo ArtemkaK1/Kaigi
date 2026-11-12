@@ -125,7 +125,7 @@ import Foundation
         let microsoft = StubCalendarProvider(kind: .microsoft, event: event)
         let coordinator = CalendarAccountCoordinator(providers: [google, microsoft])
         let visibility = CalendarVisibilityUseCase(preferences: fixture.preferences, coordinator: coordinator)
-        let accounts = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: fixture.actions, analytics: NoOpAnalyticsTracker())
+        let accounts = CalendarAccountsViewModel(coordinator: coordinator, visibility: visibility, permissionSettings: fixture.actions, access: fixture.container.access, analytics: NoOpAnalyticsTracker())
         #expect(accounts.providers.first { $0.kind == .google }?.canConnect == true)
         try await coordinator.connect(.google); try await coordinator.connect(.microsoft)
         visibility.initializeIfNeeded(); accounts.refresh()
@@ -150,7 +150,8 @@ import Foundation
         let base = try NoteRepository(inMemory: true); let store = FailingNotesStore(base: base)
         let note = try store.openNote(for: KaigiTests().meeting())
         let actions = TestActions()
-        let model = MeetingDetailViewModel(note: note, meeting: nil, notes: NoteUseCases(store: store), context: MeetingContextUseCase(store: store), ai: UnavailableAIService(), preferences: PreviewPreferencesService(), join: ConferenceJoinUseCase(opener: actions), actions: actions, analytics: NoOpAnalyticsTracker(), onSaved: {})
+        let access = FeatureAccess(toggles: .released, entitlement: EntitlementStore(provider: TestEntitlementProvider(.free)))
+        let model = MeetingDetailViewModel(note: note, meeting: nil, notes: NoteUseCases(store: store, access: access), context: MeetingContextUseCase(store: store, access: access), ai: UnavailableAIService(), preferences: PreviewPreferencesService(), join: ConferenceJoinUseCase(opener: actions), actions: actions, access: access, analytics: NoOpAnalyticsTracker(), onSaved: {})
         store.failWrites = true; model.updateText("Preserve this unsaved draft")
         #expect(model.text == "Preserve this unsaved draft")
         #expect(model.error != nil)
@@ -180,7 +181,7 @@ import Foundation
     }
 
     @Test func aiPreviewPreservesOriginalAndRejectsStaleApplication() async throws {
-        let fixture = try TestComposition(ai: MockAIRefinementService(result: "Reviewed result"), features: .allEnabled); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(ai: MockAIRefinementService(result: "Reviewed result"), features: .allEnabled, entitlement: .init(.pro)); defer { fixture.clearPreferences() }
         let record = try fixture.store.openNote(for: KaigiTests().meeting())
         let model = fixture.container.detail(note: record, meeting: nil)
         model.updateText("Rough original")
@@ -197,7 +198,7 @@ import Foundation
     }
 
     @Test func floatingAndAgendaEditorsShareTheSamePresentationState() throws {
-        let fixture = try TestComposition(features: .allEnabled); defer { fixture.clearPreferences() }
+        let fixture = try TestComposition(features: .allEnabled, entitlement: .init(.pro)); defer { fixture.clearPreferences() }
         let note = try fixture.store.openNote(for: KaigiTests().meeting())
         let agendaDetail = fixture.container.detail(note: note, meeting: nil)
         let floating = try fixture.container.detail(id: note.id)
