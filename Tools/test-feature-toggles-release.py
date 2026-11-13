@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory(prefix="kaigi-release-toggles-") as folder:
 MainActor.assumeIsolated {
     let arguments: [[String]] = [[], ["--all-features"], ["--sample"], ["--simulate-entitlement"],
         ["--sample", "--all-features", "--context-history", "--mock-ai"],
-        ["--sample", "--simulate-entitlement"], ["--sample", "--all-features", "--simulate-entitlement"],
+        ["--sample", "--simulate-entitlement", "--saved-note-fixture"], ["--sample", "--all-features", "--simulate-entitlement"],
         ["--marketing-fixtures"], ["--sample", "--marketing-fixtures"],
         ["--sample", "--marketing-fixtures", "--all-features", "--simulate-entitlement"]]
     for value in arguments {
@@ -25,14 +25,21 @@ MainActor.assumeIsolated {
             precondition(access.status(of: feature) == .requiresPro)
         }
         precondition(access.allows(.revisionHistoryUI))
+        let presentation = ProPresentationPolicy.forLaunch(arguments: value)
+        precondition(presentation.canPresent(from: .settings, access: access))
+        for entry in [ProEntryPoint.meetingContext, .floatingNotes, .ai(.cleanUp), .ai(.structure)] {
+            precondition(!presentation.canPresent(from: entry, access: access))
+        }
     }
-    print("PASS: Release launch policy resolves Free and ignores all Debug entitlement overrides")
+    print("PASS: Release resolves Free, shows Pro information in Settings, and ignores contextual QA overrides")
 }
 ''')
     binary = temporary / "probe"
     subprocess.run(["xcrun", "swiftc", "-O", "-module-cache-path", str(temporary / "modules"),
         str(root / "Kaigi/Domain/Models/FeatureToggles.swift"),
         str(root / "Kaigi/Domain/Models/FeatureAccess.swift"),
+        str(root / "Kaigi/Domain/Models/ProEntryPoint.swift"),
+        str(root / "Kaigi/Domain/Protocols/AIRefinementService.swift"),
         str(root / "Kaigi/App/EntitlementStore.swift"),
         str(root / "Kaigi/App/FeatureToggles+Launch.swift"), str(main), "-o", str(binary)], check=True)
     subprocess.run([str(binary)], env={**os.environ, "KAIGI_PRO": "1", "KAIGI_ENTITLEMENT": "pro"}, check=True)

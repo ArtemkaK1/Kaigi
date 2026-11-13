@@ -10,6 +10,8 @@ import Foundation
     let accounts: CalendarAccountsViewModel
     let onboarding: OnboardingViewModel
     let settings: SettingsViewModel
+    let pro: ProViewModel
+    private let proPresentation: ProPresentationPolicy
     private let systemPreferences: any PreferencesService
     private let ai: any AIRefinementService
     private let joinUseCase: ConferenceJoinUseCase
@@ -18,9 +20,11 @@ import Foundation
     private(set) var agenda: AgendaViewModel!
     var hasUnconfirmedContextDrafts: Bool { detailModels.values.contains(where: \.hasUnconfirmedContextDraft) }
 
-    init(providers: [any CalendarProvider], store: any NotesStore, preferences: AppPreferencesStore, systemPreferences: any PreferencesService, ai: any AIRefinementService, opener: any LinkOpening, permissionSettings: any PermissionSettingsOpening, actions: any ApplicationActions, sample: Bool, suppressOnboarding: Bool, access: FeatureAccess, analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), closeOnboarding: @escaping () -> Void) throws {
+    init(providers: [any CalendarProvider], store: any NotesStore, preferences: AppPreferencesStore, systemPreferences: any PreferencesService, ai: any AIRefinementService, opener: any LinkOpening, permissionSettings: any PermissionSettingsOpening, actions: any ApplicationActions, sample: Bool, suppressOnboarding: Bool, access: FeatureAccess, proPresentation: ProPresentationPolicy = .init(), analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), closeOnboarding: @escaping () -> Void) throws {
         self.analytics = analytics
         self.access = access
+        self.proPresentation = proPresentation
+        pro = ProViewModel(access: access)
         self.actions = actions; self.ai = ai; self.systemPreferences = systemPreferences
         coordinator = CalendarAccountCoordinator(providers: providers)
         visibility = CalendarVisibilityUseCase(preferences: preferences, coordinator: coordinator)
@@ -53,7 +57,7 @@ import Foundation
             existing.updateOccurrence(note, meeting: meeting)
             return existing
         }
-        let model = MeetingDetailViewModel(note: note, meeting: meeting, notes: noteUseCases, context: contextUseCase, ai: ai, preferences: systemPreferences, join: joinUseCase, actions: actions, access: access, analytics: analytics, onSaved: { [weak self, seriesID = note.seriesID] in
+        let model = MeetingDetailViewModel(note: note, meeting: meeting, notes: noteUseCases, context: contextUseCase, ai: ai, preferences: systemPreferences, join: joinUseCase, actions: actions, access: access, proPresentation: proPresentation, analytics: analytics, onSaved: { [weak self, seriesID = note.seriesID] in
             self?.agenda.notesChanged()
             self?.detailModels.values.filter { $0.note.seriesID == seriesID }.forEach { $0.reloadContext() }
         })

@@ -6,6 +6,7 @@ import Observation
     private var editorSessions: Set<UUID> = []
     private var editedSessions: Set<UUID> = []
     let access: FeatureAccess
+    private let proPresentation: ProPresentationPolicy
     private let notes: NoteUseCases
     private let context: MeetingContextUseCase
     private let preferences: any PreferencesService
@@ -41,7 +42,7 @@ import Observation
     func canRefine(_ action: RefinementAction) -> Bool { canRefine && allows(action) }
 
     private func allows(_ action: RefinementAction) -> Bool {
-        access.allows(action == .cleanUp ? .aiCleanUp : .aiStructure)
+        access.allows(action.feature)
     }
     var isRecurring: Bool { meeting?.recurring == true }
     var selectedHistory: NoteRecord? { history.first { $0.id == selectedHistoryID } }
@@ -51,9 +52,10 @@ import Observation
     var hasUnconfirmedContextDraft: Bool { showingContext && contextDraft != note.confirmedContext }
     var canCarrySelectedHistory: Bool { access.allows(.recurringContext) && previous.contains { $0.id == selectedHistoryID } }
 
-    init(note: NoteRecord, meeting: Meeting?, notes: NoteUseCases, context: MeetingContextUseCase, ai: any AIRefinementService, preferences: any PreferencesService, join: ConferenceJoinUseCase, actions: any ApplicationActions, access: FeatureAccess, analytics: any AnalyticsTracking, onSaved: @escaping () -> Void) {
+    init(note: NoteRecord, meeting: Meeting?, notes: NoteUseCases, context: MeetingContextUseCase, ai: any AIRefinementService, preferences: any PreferencesService, join: ConferenceJoinUseCase, actions: any ApplicationActions, access: FeatureAccess, proPresentation: ProPresentationPolicy = .init(), analytics: any AnalyticsTracking, onSaved: @escaping () -> Void) {
         self.analytics = analytics
         self.access = access
+        self.proPresentation = proPresentation
         self.note = note; self.meeting = meeting; self.notes = notes; self.context = context; self.ai = ai
         self.preferences = preferences; aiEnabled = preferences.aiEnabled
         self.joinUseCase = join; self.actions = actions; self.onSaved = onSaved
@@ -154,6 +156,15 @@ import Observation
     func accessChanged() {
         if let refinementAction, !allows(refinementAction) { invalidateRefinement() }
         reloadContext()
+    }
+
+    func showsProEntry(_ entry: ProEntryPoint) -> Bool {
+        proPresentation.canPresent(from: entry, access: access)
+    }
+
+    func showPro(from entry: ProEntryPoint) {
+        guard showsProEntry(entry) else { return }
+        actions.showPro(from: entry)
     }
 
     func showHistoryAndContext() {

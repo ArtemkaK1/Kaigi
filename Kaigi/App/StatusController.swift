@@ -19,12 +19,22 @@ import SwiftUI
     weak var windows: AppWindowCoordinator?
     private let exporter: MarkdownExporter
     private let access: FeatureAccess
+    private let proPresentation: ProPresentationPolicy
 
-    init(exporter: MarkdownExporter, access: FeatureAccess) { self.exporter = exporter; self.access = access }
+    init(exporter: MarkdownExporter, access: FeatureAccess, proPresentation: ProPresentationPolicy = .init()) {
+        self.exporter = exporter
+        self.access = access
+        self.proPresentation = proPresentation
+    }
 
     func showAccounts() { guard access.allows(.calendarManagement) else { return }; windows?.showAccounts() }
 
     func showFloatingNote(_ id: NoteID) { guard access.allows(.floatingNotes) else { return }; windows?.showFloatingNote(id) }
+
+    func showPro(from entry: ProEntryPoint) {
+        guard proPresentation.canPresent(from: entry, access: access) else { return }
+        windows?.showPro()
+    }
 
     func showMeetingContext(_ id: NoteID) { guard access.allowsMeetingContextWindow else { return }; windows?.showMeetingContext(id) }
 
@@ -40,6 +50,9 @@ import SwiftUI
     private var firebaseAnalytics: FirebaseAnalyticsAdapter?
     #if DEBUG
     private var entitlementSimulator: SimulatedEntitlementProvider?
+    var canSimulateEntitlement: Bool { entitlementSimulator != nil }
+
+    func simulateEntitlement(_ state: EntitlementState) { entitlementSimulator?.simulate(state) }
     #endif
 
     override init() {
@@ -56,7 +69,8 @@ import SwiftUI
                 entitlementSimulator = provider as? SimulatedEntitlementProvider
             }
             #endif
-            let router = AppRouter(exporter: MarkdownExporter(), access: access)
+            let proPresentation = ProPresentationPolicy.forLaunch(arguments: arguments)
+            let router = AppRouter(exporter: MarkdownExporter(), access: access, proPresentation: proPresentation)
             self.router = router
             let environment = ProcessInfo.processInfo.environment
             let isTesting = environment["XCTestConfigurationFilePath"] != nil || environment["XCTestBundlePath"] != nil || NSClassFromString("XCTestCase") != nil
@@ -68,7 +82,7 @@ import SwiftUI
             } else {
                 analytics = NoOpAnalyticsTracker()
             }
-            container = try DependencyContainer.makeLive(actions: router, access: access, analytics: analytics, isTesting: isTesting, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
+            container = try DependencyContainer.makeLive(actions: router, access: access, proPresentation: proPresentation, analytics: analytics, isTesting: isTesting, closeOnboarding: { [weak router] in router?.dismissOnboarding() })
         } catch { startupFailure = error }
         StartupTrace.mark("delegate.end")
     }
@@ -132,6 +146,10 @@ import SwiftUI
     private var agendaIsPresented = false
     private var onboardingWindow: NSWindow?
     private var accountsWindow: NSWindow?
+    private var proWindow: NSWindow?
+    private weak var proSourceWindow: NSWindow?
+    private var returnToAgendaAfterPro = false
+    private var hasSizedProWindow = false
     private var floatingPanels: [NoteID: AgendaPanel] = [:]
     private var contextWindows: [NoteID: NSWindow] = [:]
     private var notificationTokens: [NSObjectProtocol] = []
@@ -238,10 +256,10 @@ import SwiftUI
 
     func closeAgenda() { agendaPopover.performClose(nil) }
 
-    func showAgenda() {
+    func showAgenda(keepDay: Bool = false) {
         StartupTrace.mark("panel.begin")
         guard let button = statusItem?.button else { return }
-        container.agenda.showToday()
+        if !keepDay { container.agenda.showToday() }
         NSApp.activate(ignoringOtherApps: true)
         agendaPopover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         if let window = agendaPopover.contentViewController?.view.window {
@@ -264,6 +282,79 @@ import SwiftUI
         let visible = statusItem?.button?.window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
         let height = min(max(1, requestedHeight), visible.height - AppSpacing.sm)
         agendaPopover.contentSize = NSSize(width: AppLayout.panelWidth, height: height)
+    }
+
+    func showPro() {
+        let source = NSApp.keyWindow
+        let fromAgenda = agendaPopover.isShown
+        if source !== proWindow || fromAgenda {
+            returnToAgendaAfterPro = fromAgenda
+            proSourceWindow = fromAgenda ? nil : source
+        }
+
+        if proWindow == nil {
+            let display = source?.screen ?? statusItem?.button?.window?.screen ?? NSScreen.main
+            let visibleFrame = display?.visibleFrame
+            let width = min(AppLayout.proWindowWidth, visibleFrame.map { $0.width - AppSpacing.lg } ?? AppLayout.proWindowWidth)
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: width, height: AppSpacing.none),
+                styleMask: [.titled, .closable], backing: .buffered, defer: false
+            )
+            window.title = "Kaigi Pro"
+            window.titleVisibility = .hidden
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            let chrome = window.frameRect(forContentRect: .zero).height
+            let maximumHeight = (visibleFrame?.height ?? AppLayout.contextHeight) - chrome - AppSpacing.lg
+            let host = NSHostingController(
+                rootView: ProView(model: container.pro, maximumHeight: maximumHeight, onHeightChange: { [weak self] height in
+                    self?.resizePro(height: height)
+                }, close: { [weak window] in window?.performClose(nil) })
+                    .frame(width: width)
+                    .tint(AppColors.accent)
+                    .modifier(ReviewLayoutModifier())
+            )
+            host.sizingOptions = []
+            proWindow = window
+            window.contentViewController = host
+            if let visibleFrame {
+                window.setFrameOrigin(NSPoint(x: visibleFrame.midX - width / 2, y: visibleFrame.midY - window.frame.height / 2))
+            } else {
+                window.center()
+            }
+        }
+
+        guard let window = proWindow else { return }
+        if source !== window || fromAgenda {
+            window.parent?.removeChildWindow(window)
+            if !fromAgenda, let source, source.level == .floating {
+                source.addChildWindow(window, ordered: .above)
+            }
+        }
+        closeAgenda()
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    private func resizePro(height: CGFloat) {
+        guard let window = proWindow, let content = window.contentView, height > 1, abs(content.bounds.height - height) > 0.5 else { return }
+        let previousFrame = window.frame
+        let nextFrame = window.frameRect(forContentRect: NSRect(x: 0, y: 0, width: content.bounds.width, height: height))
+        let top = hasSizedProWindow ? previousFrame.maxY : previousFrame.midY + nextFrame.height / 2
+        hasSizedProWindow = true
+        let frame = NSRect(
+            x: previousFrame.minX, y: top - nextFrame.height,
+            width: nextFrame.width, height: nextFrame.height
+        )
+        if let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame {
+            let minimumY = visibleFrame.minY + AppSpacing.sm
+            let maximumY = visibleFrame.maxY - AppSpacing.sm - frame.height
+            var fittedFrame = frame
+            fittedFrame.origin.y = max(minimumY, min(maximumY, frame.minY))
+            window.setFrame(fittedFrame, display: true)
+        } else {
+            window.setFrame(frame, display: true)
+        }
     }
 
     func showAccounts() {
@@ -369,6 +460,20 @@ import SwiftUI
 
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
+        if window === proWindow {
+            window.parent?.removeChildWindow(window)
+            proWindow = nil
+            hasSizedProWindow = false
+            let source = proSourceWindow
+            let restoreAgenda = returnToAgendaAfterPro
+            proSourceWindow = nil
+            returnToAgendaAfterPro = false
+            DispatchQueue.main.async { [weak self, weak source] in
+                guard let self, self.proWindow == nil, NSApp.isActive else { return }
+                if restoreAgenda { self.showAgenda(keepDay: true) }
+                else if source?.isVisible == true { source?.makeKey() }
+            }
+        }
         if window === accountsWindow { container.accounts.pageDismissed() }
         if window === onboardingWindow { container.onboarding.windowClosed() }
         if let id = floatingPanels.first(where: { $0.value === window })?.key { floatingPanels.removeValue(forKey: id) }

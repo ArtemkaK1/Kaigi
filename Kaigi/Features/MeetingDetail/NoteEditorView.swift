@@ -16,8 +16,24 @@ struct NoteEditorView: View {
                     if model.access.allows(.markdownExport) {
                         SymbolButton(symbol: "square.and.arrow.up", label: "Export Markdown", action: model.export)
                     }
-                    if back != nil && model.access.allows(.floatingNotes) {
-                        SymbolButton(symbol: "pin", label: "Float notes", action: model.float)
+                    if back != nil {
+                        if model.access.allows(.floatingNotes) {
+                            SymbolButton(symbol: "pin", label: "Float notes", action: model.float)
+                        } else if model.showsProEntry(.floatingNotes) {
+                            Button {
+                                model.showPro(from: .floatingNotes)
+                            } label: {
+                                HStack(spacing: AppSpacing.xs) {
+                                    Image(systemName: "pin")
+                                    Image(systemName: "lock")
+                                        .appText(.caption)
+                                        .foregroundStyle(AppColors.accent)
+                                }
+                            }
+                            .buttonStyle(KaigiButtonStyle(.tertiary))
+                            .accessibilityLabel("Floating Notes, Kaigi Pro")
+                            .help("Learn about Floating Notes in Kaigi Pro")
+                        }
                     }
                 }
             }
@@ -100,27 +116,7 @@ struct NoteEditorView: View {
                 NoteContextDisclosure(title: "Unconfirmed context draft", text: model.contextDraft, contentID: "unconfirmed-note-context")
             }
             if model.hasAI {
-                HStack(spacing: AppSpacing.xs) {
-                    if model.access.allows(.aiCleanUp) {
-                        Button("Clean Up") {
-                            model.refine(.cleanUp)
-                        }
-                        .help("Improve spelling and clarity in this note; review before applying")
-                    }
-                    if model.access.allows(.aiStructure) {
-                        Button("Structure") {
-                            model.refine(.structure)
-                        }
-                        .help("Organize this note into topics, decisions, actions and questions; review before applying")
-                    }
-                    if model.refining {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                }
-                .disabled(!model.canRefine)
-                .appText(.body, weight: .medium)
-                .buttonStyle(KaigiButtonStyle())
+                aiActions
                 if let reason = model.unavailableReason {
                     Text(model.aiEnabled ? "On-device AI unavailable" : reason)
                         .appText(.caption)
@@ -151,6 +147,9 @@ struct NoteEditorView: View {
                     .background(AppColors.selected, in: RoundedRectangle(cornerRadius: AppLayout.cornerRadius))
                 }
             }
+            if !model.hasAI && (model.showsProEntry(.ai(.cleanUp)) || model.showsProEntry(.ai(.structure))) {
+                aiActions
+            }
             if model.hasHistoryAndContext {
                 Button(action: model.showHistoryAndContext) {
                     Label("History & Context", systemImage: "clock.arrow.circlepath")
@@ -158,6 +157,8 @@ struct NoteEditorView: View {
                 }
                 .buttonStyle(KaigiButtonStyle(.tertiary))
                 .accessibilityHint("Opens meeting history and confirmed context in a separate window")
+            } else if model.showsProEntry(.meetingContext) {
+                proButton("History & Context", entry: .meetingContext, symbol: "clock.arrow.circlepath")
             }
         }
         .padding(AppSpacing.sm)
@@ -165,6 +166,62 @@ struct NoteEditorView: View {
         .foregroundStyle(AppColors.primary)
         .onAppear { model.editorPresented(editorSession) }
         .onDisappear { model.editorDismissed(editorSession) }
+    }
+
+    private var aiActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppSpacing.xs) {
+                aiButtons
+            }
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                aiButtons
+            }
+        }
+    }
+
+    @ViewBuilder private var aiButtons: some View {
+        if model.access.allows(.aiCleanUp) {
+            Button("Clean Up") { model.refine(.cleanUp) }
+                .buttonStyle(KaigiButtonStyle())
+                .disabled(!model.canRefine)
+                .help("Improve spelling and clarity in this note; review before applying")
+        } else if model.showsProEntry(.ai(.cleanUp)) {
+            proButton("Clean Up", entry: .ai(.cleanUp))
+        }
+        if model.access.allows(.aiStructure) {
+            Button("Structure") { model.refine(.structure) }
+                .buttonStyle(KaigiButtonStyle())
+                .disabled(!model.canRefine)
+                .help("Organize this note into topics, decisions, actions and questions; review before applying")
+        } else if model.showsProEntry(.ai(.structure)) {
+            proButton("Structure", entry: .ai(.structure))
+        }
+        if model.refining {
+            ProgressView()
+                .controlSize(.small)
+        }
+    }
+
+    private func proButton(_ title: String, entry: ProEntryPoint, symbol: String? = nil) -> some View {
+        Button {
+            model.showPro(from: entry)
+        } label: {
+            HStack(spacing: AppSpacing.xs) {
+                if let symbol {
+                    Image(systemName: symbol)
+                        .accessibilityHidden(true)
+                }
+                Text(title)
+                Text("Pro")
+                    .appText(.caption, weight: .medium)
+                    .foregroundStyle(AppColors.accent)
+                    .accessibilityHidden(true)
+            }
+            .frame(maxWidth: entry == .meetingContext ? .infinity : nil, alignment: .leading)
+        }
+        .buttonStyle(KaigiButtonStyle(.tertiary))
+        .accessibilityLabel("\(title), Kaigi Pro")
+        .help("Learn about \(title) in Kaigi Pro")
     }
 }
 

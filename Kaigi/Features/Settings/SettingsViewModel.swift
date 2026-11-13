@@ -5,6 +5,7 @@ import Observation
     private let analytics: any AnalyticsTracking
     private var isPresented = false
     let access: FeatureAccess
+    var proState: EntitlementState { access.entitlementState }
     var hasAI: Bool { access.allows(.aiCleanUp) || access.allows(.aiStructure) }
     private let service: any PreferencesService
     private let actions: any ApplicationActions
@@ -41,6 +42,8 @@ import Observation
         refresh(); onChanged()
         if before != remindersEnabled { analytics.track(.settingsRemindersChanged(remindersEnabled)) }
     }
+
+    func showPro() { actions.showPro(from: .settings) }
 
     func showAccounts() { guard access.allows(.calendarManagement) else { return }; actions.showAccounts() }
 

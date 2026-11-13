@@ -21,6 +21,7 @@ nonisolated enum FeatureAccessStatus: Equatable, Sendable {
 @MainActor struct FeatureAccess {
     let toggles: FeatureToggles
     private let entitlement: any EntitlementReading
+    var entitlementState: EntitlementState { entitlement.state }
 
     init(toggles: FeatureToggles, entitlement: any EntitlementReading) {
         self.toggles = toggles
@@ -33,7 +34,7 @@ nonisolated enum FeatureAccessStatus: Equatable, Sendable {
         case .calendarManagement, .meetingReminders, .markdownExport, .launchAtLogin, .revisionHistoryUI:
             return .available
         case .meetingHistory, .recurringContext, .floatingNotes, .aiCleanUp, .aiStructure:
-            switch entitlement.state {
+            switch entitlementState {
             case .loading: return .loading
             case .free: return .requiresPro
             case .pro: return .available

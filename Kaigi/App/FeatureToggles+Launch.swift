@@ -47,3 +47,14 @@ extension FeatureToggles {
     func simulate(_ state: EntitlementState) { deliver?(state) }
 }
 #endif
+
+extension ProPresentationPolicy {
+    static func forLaunch(arguments: [String]) -> ProPresentationPolicy {
+        #if DEBUG
+        return ProPresentationPolicy(contextualEntryPointsEnabled:
+            EntitlementLaunchPolicy.allowsSimulation(arguments) && arguments.contains("--simulate-entitlement"))
+        #else
+        return ProPresentationPolicy()
+        #endif
+    }
+}

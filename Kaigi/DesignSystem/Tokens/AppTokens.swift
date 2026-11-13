@@ -38,6 +38,8 @@ enum AppLayout {
     static let onboardingReadyHeight: CGFloat = 256
     static let onboardingHeight: CGFloat = 440
     static let reviewHeight: CGFloat = 480 // Debug-only constrained-display fixture.
+    // Reading width for four capability descriptions and a compact native footer.
+    static let proWindowWidth: CGFloat = 480
     static let contextWidth: CGFloat = 720
     static let contextHeight: CGFloat = 560
     static let contextMinimumWidth: CGFloat = 600

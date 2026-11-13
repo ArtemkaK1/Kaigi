@@ -39,9 +39,34 @@ struct SettingsView: View {
             if let message = model.message {
                 InlineMessage(text: message)
             }
+            Divider()
+                .overlay(AppColors.border)
+            Button(action: model.showPro) {
+                HStack(spacing: AppSpacing.xs) {
+                    Label("Kaigi Pro", systemImage: "sparkles")
+                    Spacer(minLength: AppSpacing.none)
+                    Text(proStatus)
+                        .appText(.caption)
+                        .foregroundStyle(AppColors.secondary)
+                    Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
+                }
+            }
+            .buttonStyle(KaigiButtonStyle(.tertiary))
+            .accessibilityLabel("Kaigi Pro")
+            .accessibilityValue(proStatus)
+            .accessibilityIdentifier("settings-kaigi-pro")
         }
         .padding(AppSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear(perform: model.refresh)
+    }
+
+    private var proStatus: String {
+        switch model.proState {
+        case .loading: "Checking access…"
+        case .free: "Coming Soon"
+        case .pro: "Active"
+        }
     }
 }

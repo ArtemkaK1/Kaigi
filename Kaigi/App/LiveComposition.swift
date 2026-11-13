@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 
 extension DependencyContainer {
-    static func makeLive(actions: any ApplicationActions, access: FeatureAccess, analytics: any AnalyticsTracking, isTesting: Bool = false, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
+    static func makeLive(actions: any ApplicationActions, access: FeatureAccess, proPresentation: ProPresentationPolicy, analytics: any AnalyticsTracking, isTesting: Bool = false, closeOnboarding: @escaping () -> Void) throws -> DependencyContainer {
         StartupTrace.mark("composition.begin")
         defer { StartupTrace.mark("composition.end") }
         #if DEBUG
@@ -35,6 +35,16 @@ extension DependencyContainer {
         StartupTrace.mark("services.created")
         let store = try NoteRepository(inMemory: sample)
         #if DEBUG
+        if sample && arguments.contains("--saved-note-fixture") {
+            let fixtures = SampleCalendarGateway()
+            let day = Calendar.current.dateInterval(of: .day, for: .now)!
+            let meetings = try fixtures.meetings(in: day, calendarIDs: ["sample"])
+            for meeting in [meetings.first, meetings.first(where: \.recurring)].compactMap({ $0 }) {
+                let note = try store.openNote(for: meeting)
+                _ = try store.saveDraft(id: note.id, text: "Earlier synthetic draft", reason: "Synthetic QA")
+                _ = try store.saveDraft(id: note.id, text: "Synthetic saved note", reason: "Synthetic QA")
+            }
+        }
         if sample && arguments.contains("--context-history") {
             let fixtures = SampleCalendarGateway()
             for offset in 1...3 {
@@ -50,7 +60,7 @@ extension DependencyContainer {
         }
         #endif
         StartupTrace.mark("notes.created")
-        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, access: access, analytics: analytics, closeOnboarding: closeOnboarding)
+        return try DependencyContainer(providers: [provider], store: store, preferences: AppPreferencesStore(defaults: defaults), systemPreferences: system, ai: ai, opener: WorkspaceLinkOpener(), permissionSettings: WorkspacePermissionSettings(), actions: actions, sample: sample, suppressOnboarding: sample && !firstRun, access: access, proPresentation: proPresentation, analytics: analytics, closeOnboarding: closeOnboarding)
     }
 }
 #if DEBUG

@@ -66,6 +66,8 @@ extension CalendarProvider {
 
     func showFloatingNote(_ id: NoteID)
 
+    func showPro(from entry: ProEntryPoint)
+
     func showMeetingContext(_ id: NoteID)
 
     func export(_ document: MarkdownDocument) async throws -> ExportOutcome

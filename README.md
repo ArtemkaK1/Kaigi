@@ -25,7 +25,7 @@ git diff --check
 
 The Swift module remains `Meetrail` to preserve SwiftData model identity; tests use `@testable import Meetrail`.
 
-For a private preview, run a Debug build with `--sample --show-agenda`. This uses synthetic calendars and in-memory notes without requesting calendar access, and defaults to the free configuration. Add `--simulate-entitlement` to start in Loading and switch between Loading, Free, and Pro from the status item’s right-click menu. Add `--all-features` to start directly in Pro with the QA rollout. Both overrides require a synthetic Debug session and are excluded from the marketing profile. Release always resolves Free. Add `--context-history` for synthetic earlier occurrences, `--mock-ai` for deterministic AI, `--onboarding` to preview setup, `--large-text` to check accessibility text sizing, or `-NSAppearance Aqua` / `-NSAppearance DarkAqua` to check appearance. UI tests require an interactive macOS session and local UI Automation authorization; live calendar integration tests require the synthetic fixtures described by `Tools/run-calendar-qa.sh` and cleanup afterward.
+For a private preview, run a Debug build with `--sample --show-agenda`. This uses synthetic calendars and in-memory notes without requesting calendar access, and defaults to the free configuration. Add `--simulate-entitlement` to start in Loading and switch between Loading, Free, and Pro from the status item’s right-click menu or the Entitlement QA app menu. In that session, the editor’s Pro actions open the informational window while Free. Add `--all-features` to start directly in Pro with the QA rollout. Both overrides require a synthetic Debug session and are excluded from the marketing profile. Release always resolves Free. Add `--context-history` for synthetic earlier occurrences, `--mock-ai` for deterministic AI, `--onboarding` to preview setup, `--large-text` to check accessibility text sizing, or `-NSAppearance Aqua` / `-NSAppearance DarkAqua` to check appearance. UI tests require an interactive macOS session and local UI Automation authorization; live calendar integration tests require the synthetic fixtures described by `Tools/run-calendar-qa.sh` and cleanup afterward.
 
 ## Use and capabilities
 
@@ -37,7 +37,7 @@ Only Apple / System Calendars connects today. Google, Microsoft, and CalDAV acco
 
 Calendar and notification consent, launch-at-login approval, model readiness, and conference links depend on macOS and external services. Synthetic previews do not validate those services.
 
-Kaigi Pro groups meeting-scoped history, recurring context workflows, floating editors, AI Clean Up, and AI Structure. Normal launches use Free until the verified entitlement provider is integrated. P1 has not been submitted to App Review. See the [feature matrix and developer guide](Docs/FeatureToggles.md).
+Kaigi Pro groups meeting-scoped history, recurring context workflows, floating editors, AI Clean Up, and AI Structure. Settings opens the informational Kaigi Pro window. Purchases are currently unavailable. Normal launches use Free until the verified entitlement provider is integrated. See the [feature matrix and developer guide](Docs/FeatureToggles.md).
 
 ## Data and compatibility
 
@@ -52,6 +52,12 @@ Views → ViewModels → Domain use cases/services → repository/provider proto
 App composition injects one shared `FeatureAccess` policy. It combines immutable rollout configuration with the observable entitlement store. Views render the ViewModel’s access, and use cases and window routes check access during execution. Firebase Analytics and Crashlytics remain the third-party product integrations.
 
 Calendar providers register through `CalendarAccountCoordinator`. Future provider identities are namespaced by provider, account, and calendar. The [design system](Docs/Brand/DesignSystem.md) documents adaptive purple/neutral colors, native typography, spacing, and controls. Every SwiftUI View modifier starts on its own line.
+
+## P2 Pro window validation — 13 November 2026
+
+Signed Debug and universal Release builds passed on macOS 26.6.2 with Xcode 27. All 83 selected unit tests and six focused UI cases passed across the final runs. The UI checks covered Settings and the shared Pro window in both appearances, Loading and live entitlement changes, contextual entry points, Escape dismissal, larger accessibility text, and Free revision restoration and saved context. Synthetic notes and revisions made the editor checks independent of local keyboard input. XCTest initially timed out at macOS UI Automation authorization and succeeded in the interactive session on subsequent runs.
+
+The visual review used screenshots from the running synthetic Debug app. Refinements removed a repeated title, kept the footer available as text grows, and inset the window from the Dock. The Release probe confirmed Free entitlement, the Settings information route, and suppression of contextual QA routes. The Release binary had no synthetic access markers. Live calendar fixtures, macOS 15, and spoken VoiceOver were outside this run.
 
 ## P1 feature-access validation — 12 November 2026
 

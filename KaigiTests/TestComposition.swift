@@ -5,6 +5,7 @@ import Foundation
     var opened: [URL] = []
     var floating: [NoteID] = []
     var contextWindows: [NoteID] = []
+    var proEntries: [ProEntryPoint] = []
     var exportOutcome = ExportOutcome.success
     var exportError: Error?
     var exports: [MarkdownDocument] = []
@@ -14,6 +15,8 @@ import Foundation
     func showAccounts() { accountWindows += 1 }
 
     func showFloatingNote(_ id: NoteID) { floating.append(id) }
+
+    func showPro(from entry: ProEntryPoint) { proEntries.append(entry) }
 
     func showMeetingContext(_ id: NoteID) { contextWindows.append(id) }
 
@@ -48,7 +51,7 @@ import Foundation
     let container: DependencyContainer
     let entitlement: TestEntitlementProvider
 
-    init(calendars: Int = 1, meetings: Int = 3, firstRun: Bool = false, legacyIDs: [String]? = nil, store: NoteRepository? = nil, ai: (any AIRefinementService)? = nil, features: FeatureToggles = .released, entitlement: TestEntitlementProvider? = nil, analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), provider: SampleCalendarGateway? = nil) throws {
+    init(calendars: Int = 1, meetings: Int = 3, firstRun: Bool = false, legacyIDs: [String]? = nil, store: NoteRepository? = nil, ai: (any AIRefinementService)? = nil, features: FeatureToggles = .released, entitlement: TestEntitlementProvider? = nil, proPresentation: ProPresentationPolicy = .init(), analytics: any AnalyticsTracking = NoOpAnalyticsTracker(), provider: SampleCalendarGateway? = nil) throws {
         suite = "kaigi.test.\(UUID().uuidString)"; defaults = UserDefaults(suiteName: suite)!
         if let legacyIDs { defaults.set(legacyIDs, forKey: "selectedCalendars") }
         preferences = AppPreferencesStore(defaults: defaults)
@@ -57,7 +60,7 @@ import Foundation
         self.store = try store ?? NoteRepository(inMemory: true)
         self.entitlement = entitlement ?? TestEntitlementProvider(.free)
         let access = FeatureAccess(toggles: features, entitlement: EntitlementStore(provider: self.entitlement))
-        container = try DependencyContainer(providers: [self.provider], store: self.store, preferences: preferences, systemPreferences: system, ai: ai ?? UnavailableAIService(), opener: actions, permissionSettings: actions, actions: actions, sample: true, suppressOnboarding: !firstRun, access: access, analytics: analytics, closeOnboarding: {})
+        container = try DependencyContainer(providers: [self.provider], store: self.store, preferences: preferences, systemPreferences: system, ai: ai ?? UnavailableAIService(), opener: actions, permissionSettings: actions, actions: actions, sample: true, suppressOnboarding: !firstRun, access: access, proPresentation: proPresentation, analytics: analytics, closeOnboarding: {})
     }
 
     func clearPreferences() { defaults.removePersistentDomain(forName: suite) }

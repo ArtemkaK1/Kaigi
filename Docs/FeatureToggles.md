@@ -30,8 +30,14 @@ Each AI action checks its own access and also respects the user's AI preference 
 - These overrides are Debug-only and excluded from the marketing fixture profile. Simulated entitlement is held in memory. The Release launch policy resolves Free regardless of QA arguments.
 - Unit tests default to Free. Advanced tests inject rollout and entitlement explicitly, for example `TestComposition(features: .allEnabled, entitlement: .init(.pro))`. Runtime tests use a provider that can publish states deterministically. Run `python3 Tools/test-feature-toggles-release.py` to compile and exercise the real launch policy without DEBUG.
 
-## P2 and P3
+## Kaigi Pro window
 
-P2 can render contextual Paywall entry points for `.requiresPro` and keep `.unavailable` and `.loading` distinct. A shared App-level route can present the Paywall from those actions and from a Settings upgrade section. Existing protected operations keep their access checks.
+Settings always offers a compact Kaigi Pro row. It reports **Checking access…**, **Coming Soon**, or **Active** from the current entitlement. The shared native window describes released capabilities. Its Free footer explains the planned one-time purchase and current purchase availability. The Active and Loading footers reflect access without purchase messaging.
 
-P3 can inject a StoreKit 2 provider in App composition. It can publish verified ownership after initial resolution and publish updates on transaction or revocation changes. The rollout list, store, ViewModels, and existing window routes use the same interfaces. App Review and distribution validation remain separate from local feature-access testing.
+`ProPresentationPolicy` enables contextual entry points in synthetic Debug sessions launched with `--sample --simulate-entitlement`. It evaluates `.requiresPro` through `FeatureAccess` at presentation and routing time. History & Context, Floating Notes, Clean Up, and Structure open the same window from the editor. Loading and unreleased actions stay hidden. The standard actions retain their execution checks. The right-click status menu and the **Entitlement QA** app menu can change access while the window is open.
+
+The window coordinator keeps one Pro window, reuses it while visible, and returns focus to its source when dismissed. Opening it from the agenda preserves the selected day and editor. The window sizes to measured content and caps scrolling above the footer on shorter screens. The Pro reading width is 480 pt before the display cap.
+
+## P3
+
+Inject a StoreKit 2 provider in App composition to publish verified ownership and revocations. Supply localized product data, handle purchase and restore outcomes, and enable contextual entry points when purchase is available. The shared Pro window, route, ViewModels, and execution guards use the existing access interfaces.
